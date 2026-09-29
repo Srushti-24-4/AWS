@@ -1,0 +1,194 @@
+# ============================================================
+# Project Ambient Guardian — .gitignore
+# Amazon Developer Hackathon: Build, Ship, Shape (2026)
+# ============================================================
+
+# ---------------------------
+# Python
+# ---------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.pyenv/
+
+# Pytest & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# mypy / pyright
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# ---------------------------
+# Environment & Secrets
+# ---------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+secrets.yaml
+
+# ---------------------------
+# AWS Credentials (never commit)
+# ---------------------------
+.aws/
+aws_credentials.json
+bedrock_config.json
+
+# ---------------------------
+# Node / Frontend
+# ---------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+node_modules/
+
+# npm / yarn / pnpm lock (keep package-lock.json but ignore yarn.lock if not used)
+yarn.lock
+pnpm-lock.yaml
+.yarn/
+.pnp.*
+
+# Vite cache
+frontend/.vite/
+
+# ---------------------------
+# IDEs & Editors
+# ---------------------------
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains (PyCharm, IntelliJ, WebStorm)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ---------------------------
+# OS-generated files
+# ---------------------------
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ---------------------------
+# Logs & Runtime artifacts
+# ---------------------------
+*.log
+*.log.*
+logs/
+log/
+*.pid
+*.seed
+*.pid.lock
+
+# ---------------------------
+# Temp & scratch files
+# ---------------------------
+tmp/
+temp/
+scratch/
+*.tmp
+*.bak
+*.swp
+*.orig
+
+# ---------------------------
+# Testing & QA
+# ---------------------------
+.pytest_cache/
+test-results/
+junit.xml
+report.xml
+
+# ---------------------------
+# Docker (if added later)
+# ---------------------------
+.dockerignore
+docker-compose.override.yml
+
+# ---------------------------
+# Jupyter Notebooks (if any)
+# ---------------------------
+.ipynb_checkpoints/
+*.ipynb
+
+# ---------------------------
+# Packaging
+# ---------------------------
+*.whl
+*.tar.gz
+*.zip
