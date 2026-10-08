@@ -2,48 +2,222 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  }
-  
-  code, pre {
-    font-family: 'JetBrains Mono', monospace;
-  }
+/* ── Google Fonts ───────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ── Global Reset ───────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background-color: #0A0A0A;
+  color: #00FF41;
+  font-family: 'JetBrains Mono', monospace;
+  overflow-x: hidden;
 }
 
-/* Custom scrollbars for code and log streams */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ── CRT Scanline Overlay ────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+/* ── Scrollbars ──────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0A0A0A; }
+::-webkit-scrollbar-thumb { background: #00A028; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #00FF41; }
+
+/* ── Pixel Border ─────────────────────────────────── */
+.pixel-border {
+  border: 1px solid #00FF41;
+  box-shadow: 0 0 8px rgba(0,255,65,0.25), inset 0 0 8px rgba(0,255,65,0.05);
+}
+.pixel-border-danger {
+  border: 1px solid #FF3131;
+  box-shadow: 0 0 8px rgba(255,49,49,0.35), inset 0 0 8px rgba(255,49,49,0.05);
+}
+.pixel-border-warn {
+  border: 1px solid #FFD700;
+  box-shadow: 0 0 8px rgba(255,215,0,0.3), inset 0 0 8px rgba(255,215,0,0.05);
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.8);
-  border-radius: 4px;
+/* ── Pixel corners ──────────────────────────────── */
+.pixel-corner {
+  position: relative;
+}
+.pixel-corner::before,
+.pixel-corner::after {
+  content: '';
+  position: absolute;
+  width: 6px; height: 6px;
+  background: #00FF41;
+}
+.pixel-corner::before { top: -1px; left: -1px; }
+.pixel-corner::after  { bottom: -1px; right: -1px; }
+
+/* ── Matrix glow text ────────────────────────────── */
+.text-glow {
+  text-shadow: 0 0 8px #00FF41, 0 0 16px rgba(0,255,65,0.5);
+}
+.text-glow-danger {
+  text-shadow: 0 0 8px #FF3131, 0 0 16px rgba(255,49,49,0.5);
+}
+.text-glow-warn {
+  text-shadow: 0 0 8px #FFD700, 0 0 16px rgba(255,215,0,0.4);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(71, 85, 105, 1);
+/* ── Glitch animation ────────────────────────────── */
+.glitch {
+  position: relative;
+  animation: glitch 3s infinite;
+}
+.glitch::before, .glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+.glitch::before {
+  color: #FF3131;
+  clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+  animation: glitch-top 3s infinite;
+  offset: 2px;
+}
+.glitch::after {
+  color: #00CAFF;
+  clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+  animation: glitch-bot 3s infinite;
+  offset: -2px;
+}
+@keyframes glitch-top {
+  0%, 90%, 100% { transform: translate(0); }
+  92% { transform: translate(-2px, -1px); clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%); }
+  94% { transform: translate(2px, 1px); }
+}
+@keyframes glitch-bot {
+  0%, 90%, 100% { transform: translate(0); }
+  93% { transform: translate(2px, 1px); clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%); }
+  95% { transform: translate(-2px, -1px); }
 }
 
-/* Glowing effects */
-.glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.4);
+/* ── Blink cursor ─────────────────────────────────── */
+.cursor::after {
+  content: '_';
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
-.glow-amber {
-  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.4);
+/* ── Pixel button ─────────────────────────────────── */
+.btn-pixel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #00FF41;
+  background: transparent;
+  border: 1px solid #00FF41;
+  padding: 6px 14px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.15s;
+  position: relative;
+}
+.btn-pixel:hover {
+  background: rgba(0,255,65,0.1);
+  box-shadow: 0 0 12px rgba(0,255,65,0.5);
+}
+.btn-pixel:active {
+  transform: translate(1px, 1px);
+}
+.btn-pixel-danger {
+  color: #FF3131;
+  border-color: #FF3131;
+}
+.btn-pixel-danger:hover {
+  background: rgba(255,49,49,0.1);
+  box-shadow: 0 0 12px rgba(255,49,49,0.5);
+}
+.btn-pixel-solid {
+  background: #00FF41;
+  color: #0A0A0A;
+  font-weight: 700;
+}
+.btn-pixel-solid:hover {
+  background: #39FF14;
+  box-shadow: 0 0 20px rgba(0,255,65,0.7);
+  color: #0A0A0A;
 }
 
-.glow-red {
-  box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.5);
+/* ── Card ─────────────────────────────────────────── */
+.pixel-card {
+  background: #0F1A0F;
+  border: 1px solid #1A3A1A;
+  padding: 16px;
+}
+.pixel-card:hover {
+  border-color: #00A028;
 }
 
-.glow-blue {
-  box-shadow: 0 0 25px -5px rgba(0, 202, 255, 0.4);
+/* ── Scanline anim for moving line ──────────────── */
+.scanline-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.scanline-sweep::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,255,65,0.6), transparent);
+  animation: scan 4s linear infinite;
+}
+@keyframes scan {
+  0%   { top: 0; }
+  100% { top: 100%; }
+}
+
+/* ── Pixel progress bar ────────────────────────── */
+.progress-pixel {
+  background: #0F1A0F;
+  border: 1px solid #1A3A1A;
+  height: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.progress-pixel-inner {
+  height: 100%;
+  transition: width 0.6s ease;
+  position: relative;
+}
+.progress-pixel-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 6px,
+    rgba(0,0,0,0.3) 6px,
+    rgba(0,0,0,0.3) 8px
+  );
+}
+
+/* ── Nav active ─────────────────────────────────── */
+.nav-active {
+  color: #00FF41;
+  border-bottom: 2px solid #00FF41;
+  text-shadow: 0 0 8px #00FF41;
 }
