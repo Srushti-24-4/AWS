@@ -61,6 +61,20 @@ class ResidentProfile(BaseModel):
         "contact_phone": "+1-555-019-2831",
         "escalation_policy": "SMS on MEDIUM, Phone Call on HIGH/CRITICAL",
     }
+    escalation_contacts: List[Dict[str, str]] = [
+        {
+            "name": "Dr. Sarah Vance",
+            "relationship": "Daughter / Primary Caregiver",
+            "contact_phone": "+1-555-019-2831",
+            "method": "Phone Call + SMS",
+        },
+        {
+            "name": "Margaret Chen",
+            "relationship": "Next-door Neighbour",
+            "contact_phone": "+1-555-034-7712",
+            "method": "SMS + Physical Check",
+        },
+    ]
 
 
 class TelemetryStore:

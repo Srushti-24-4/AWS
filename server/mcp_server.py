@@ -176,6 +176,19 @@ MCP_TOOLS = [
             "required": ["resident_id"],
         },
     },
+,
+    {
+        "name": "voice_command",
+        "description": "Accepts spoken user input and optional Gemini API key, forwards to decision service.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "command": {"type": "string", "description": "Transcribed user speech."},
+                "gemini_key": {"type": "string", "description": "Google Gemini API key supplied by the front‑end."}
+            },
+            "required": ["command"]
+        }
+    }
 ]
 
 
@@ -250,7 +263,7 @@ def handle_trigger_voice_nudge(args: Dict[str, Any]) -> Dict[str, Any]:
         "screen_display_text": voice_prompt,
         "action_buttons": ["I'm Okay", "I Need Assistance", "Snooze 10m"],
         "caregiver_escalation_queued": escalation_queued,
-        "caregiver_contact": telemetry_store.profile.caregiver["name"] if escalation_queued else None,
+        "escalation_contacts": telemetry_store.profile.escalation_contacts if escalation_queued else [],
         "dispatched_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -264,6 +277,58 @@ def handle_trigger_voice_nudge(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"status": "dispatched", "nudge": nudge_payload}
 
 
+# Module-level Gemini API key (set via POST /gemini/key)
+GEMINI_API_KEY: Optional[str] = None
+
+
+def handle_voice_command(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle spoken user commands, forwarding to Gemini for decision-making if key available."""
+    command = args.get("command", "").strip()
+    # Accept key passed inline from frontend, or fall back to globally stored one
+    gemini_key = args.get("gemini_key") or GEMINI_API_KEY
+
+    broadcast_log({
+        "direction": "VOICE_COMMAND",
+        "category": "user_voice",
+        "payload": {"command": command, "gemini_active": bool(gemini_key)},
+    })
+
+    if not command:
+        return {"status": "error", "message": "Empty voice command received."}
+
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            system_ctx = (
+                "You are an AI health safety assistant for an elderly resident named Eleanor Vance (age 78). "
+                "She has hypertension, mild cognitive impairment, and elevated fall risk. "
+                "When her caregiver or a family member gives a voice command, analyse it and respond with: "
+                "1) A plain-English summary of what action to take, and 2) Whether to trigger a voice nudge "
+                "(NUDGE: YES/NO) and at what tone (gentle/inquisitive/urgent/emergency). "
+                "Keep the response under 100 words."
+            )
+            response = model.generate_content(f"{system_ctx}\n\nVoice command: {command}")
+            decision = response.text.strip()
+            broadcast_log({
+                "direction": "GEMINI_DECISION",
+                "category": "ai_decision",
+                "payload": {"command": command, "decision": decision},
+            })
+            return {"status": "success", "source": "gemini", "command": command, "decision": decision}
+        except Exception as exc:
+            logger.error("Gemini API error: %s", exc)
+            return {"status": "error", "source": "gemini", "message": str(exc)}
+    else:
+        # No Gemini key — echo the command back with a placeholder
+        placeholder = (
+            f"Received: '{command}'. "
+            "Gemini key not configured — add your key via Settings to enable AI decision-making."
+        )
+        return {"status": "success", "source": "echo", "command": command, "decision": placeholder}
+
+
 def dispatch_tool(tool_name: str, arguments: Dict[str, Any]) -> Any:
     """Dispatches execution to the corresponding tool handler."""
     if tool_name == "get_ambient_status":
@@ -272,6 +337,8 @@ def dispatch_tool(tool_name: str, arguments: Dict[str, Any]) -> Any:
         return handle_eval_anomaly_risk(arguments)
     elif tool_name == "trigger_voice_nudge":
         return handle_trigger_voice_nudge(arguments)
+    elif tool_name == "voice_command":
+        return handle_voice_command(arguments)
     else:
         raise ValueError(f"Unknown MCP tool: '{tool_name}'")
 
