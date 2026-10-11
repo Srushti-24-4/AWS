@@ -14,7 +14,7 @@ import os
 import re
 import secrets
 from typing import Any, Dict, List, Optional
-from fastapi import HTTPException, Header, status
+from fastapi import HTTPException, Header, Query, status
 
 # Default development token; in production, injected via AWS Secrets Manager or KMS
 DEFAULT_MCP_TOKEN = os.getenv("MCP_BEARER_TOKEN", "ambient-guardian-secret-token-2026")
@@ -48,7 +48,33 @@ class SecurityValidationError(HTTPException):
         )
 
 
-def verify_bearer_token(authorization: Optional[str] = Header(None)) -> str:
+def verify_bearer_token(authorization: Optional[str] = Header(None), token: Optional[str] = Query(None)) -> str:
+    """Validate token from Authorization header or ?token= query.
+    Returns the token string if valid, otherwise raises HTTPException.
+    """
+    # Prefer Authorization header if present
+    provided_token = None
+    if authorization:
+        parts = authorization.strip().split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            provided_token = parts[1]
+    # Fallback to query param
+    if not provided_token and token:
+        provided_token = token
+    if not provided_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization token. Provide via 'Authorization: Bearer <token>' header or '?token=' query.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    expected_token = os.getenv("MCP_BEARER_TOKEN", DEFAULT_MCP_TOKEN)
+    if not hmac.compare_digest(provided_token.encode("utf-8"), expected_token.encode("utf-8")):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Invalid MCP Bearer token",
+        )
+    return provided_token
+
     """Validates HTTP Bearer token using constant-time string comparison.
 
     Required by Spec 2025-11-25 for authenticated Streamable HTTP MCP transports.

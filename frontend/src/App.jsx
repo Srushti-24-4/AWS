@@ -6,6 +6,26 @@ import MCPPage from './pages/MCPPage.jsx';
 import Navbar from './components/Navbar.jsx';
 import axios from 'axios';
 
+// ------------------------------------------------------------------
+// Auth token handling – pull from environment or ask the user once.
+// ------------------------------------------------------------------
+const DEFAULT_TOKEN = import.meta.env.VITE_MCP_TOKEN || 'ambient-guardian-secret-token-2026';
+let token = DEFAULT_TOKEN;
+if (!token) {
+  // Prompt the user for a token (only on first load). This value will be stored
+  // in localStorage for subsequent reloads.
+  const stored = localStorage.getItem('MCP_TOKEN');
+  if (stored) {
+    token = stored;
+  } else {
+    token = prompt('Enter the MCP Bearer token (provided by the backend):');
+    if (token) localStorage.setItem('MCP_TOKEN', token);
+  }
+}
+// Apply the header globally for all axios calls.
+axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+
 // Central state sync with MCP server via SSE
 export default function App() {
   const navigate = useNavigate();
@@ -15,7 +35,7 @@ export default function App() {
 
   // SSE connection for live updates
   useEffect(() => {
-    const evtSource = new EventSource('/mcp/v1/sse');
+    const evtSource = new EventSource(`/mcp/v1/sse?token=${token}`);
     evtSource.onmessage = e => {
       try {
         const data = JSON.parse(e.data);
