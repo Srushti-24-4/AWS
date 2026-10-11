@@ -61,6 +61,7 @@ app.add_middleware(
 
 # In-memory log buffer and SSE broadcasters for the web simulator
 simulator_subscribers: List[asyncio.Queue] = []
+notification_subscribers: List[asyncio.Queue] = []
 mcp_sessions: Dict[str, asyncio.Queue] = {}
 recent_logs: List[Dict[str, Any]] = []
 
