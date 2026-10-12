@@ -4,7 +4,9 @@ import HomePage from './pages/HomePage.jsx';
 import SensorPage from './pages/SensorPage.jsx';
 import MCPPage from './pages/MCPPage.jsx';
 import Navbar from './components/Navbar.jsx';
+import BottomDock from './components/BottomDock.jsx';
 import axios from 'axios';
+
 
 // ------------------------------------------------------------------
 // Auth token handling – pull from environment or ask the user once.
@@ -77,16 +79,18 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-terminal-black text-matrix">
+    <div className="flex flex-col min-h-screen" style={{ background: '#121212', color: '#fff' }}>
       <Navbar connectionStatus="connected" activeScenario={state?.snapshot?.active_scenario} />
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden pb-28">
         <Routes>
           <Route path="/" element={<HomePage state={state} logs={logs} onScenarioChange={changeScenario} onSimulateTool={simulateTool} />} />
           <Route path="/sensors" element={<SensorPage state={state} logs={logs} onScenarioChange={changeScenario} onRefreshState={refreshState} />} />
           <Route path="/console" element={<MCPPage state={state} logs={logs} recentNudge={recentNudge} onSimulateTool={simulateTool} onSendResponse={sendResponse} />} />
-          <Route path="*" element={<div className='p-8'>404 – Page not found</div>} />
+          <Route path="*" element={<div className='p-8 sw-body' style={{color:'#999'}}>404 – Page not found</div>} />
         </Routes>
       </main>
+      <BottomDock />
     </div>
   );
 }
+

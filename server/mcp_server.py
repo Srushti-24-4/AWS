@@ -176,7 +176,6 @@ MCP_TOOLS = [
             "required": ["resident_id"],
         },
     },
-,
     {
         "name": "voice_command",
         "description": "Accepts spoken user input and optional Gemini API key, forwards to decision service.",
@@ -184,7 +183,7 @@ MCP_TOOLS = [
             "type": "object",
             "properties": {
                 "command": {"type": "string", "description": "Transcribed user speech."},
-                "gemini_key": {"type": "string", "description": "Google Gemini API key supplied by the front‑end."}
+                "gemini_key": {"type": "string", "description": "Google Gemini API key supplied by the front-end."}
             },
             "required": ["command"]
         }
@@ -341,6 +340,26 @@ def dispatch_tool(tool_name: str, arguments: Dict[str, Any]) -> Any:
         return handle_voice_command(arguments)
     else:
         raise ValueError(f"Unknown MCP tool: '{tool_name}'")
+
+
+# ============================================================================
+# GEMINI KEY MANAGEMENT
+# ============================================================================
+
+class GeminiKeyPayload(BaseModel):
+    api_key: str
+
+
+@app.post("/gemini/key")
+async def set_gemini_key(
+    payload: GeminiKeyPayload,
+    token: str = Depends(verify_bearer_token),
+):
+    """Stores the Google Gemini API key for use by the voice_command tool."""
+    global GEMINI_API_KEY
+    GEMINI_API_KEY = payload.api_key.strip()
+    logger.info("Gemini API key updated (length=%d).", len(GEMINI_API_KEY))
+    return {"status": "saved", "key_length": len(GEMINI_API_KEY)}
 
 
 # ============================================================================

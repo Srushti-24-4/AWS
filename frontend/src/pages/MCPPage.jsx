@@ -4,6 +4,8 @@ import {
   Copy, Check, Clock, ChevronDown, ChevronRight, Volume2, VolumeX,
   PhoneCall, User, BrainCircuit, ShieldCheck, Radio, Mic
 } from 'lucide-react';
+import VoiceCommand from '../components/VoiceCommand.jsx';
+
 
 const URGENCY_STYLE = {
   NOMINAL:  { text: 'text-matrix',     bar: 'bg-matrix',    glow: '0 0 12px rgba(0,255,65,0.4)' },
@@ -92,11 +94,14 @@ export default function MCPPage({ state, logs, recentNudge, onSimulateTool, onSe
 
   const dirColor = (dir) => {
     if (!dir) return 'border-terminal-border text-terminal-muted';
-    if (dir.includes('SECURITY')) return 'border-red-500/70 text-red-400 bg-red-500/5';
-    if (dir.includes('NUDGE'))    return 'border-matrix/60 text-matrix bg-matrix/5';
+    if (dir.includes('SECURITY'))       return 'border-red-500/70 text-red-400 bg-red-500/5';
+    if (dir.includes('NUDGE'))          return 'border-matrix/60 text-matrix bg-matrix/5';
+    if (dir.includes('VOICE_COMMAND'))  return 'border-purple-400/60 text-purple-300 bg-purple-500/5';
+    if (dir.includes('GEMINI'))         return 'border-blue-400/60 text-blue-300 bg-blue-500/5';
     if (dir.includes('TOOL') || dir.includes('SIMULATED')) return 'border-yellow-500/60 text-yellow-400 bg-yellow-400/5';
     return 'border-terminal-border text-terminal-muted';
   };
+
 
   return (
     <div className="min-h-screen bg-terminal-black text-matrix font-mono">
@@ -223,9 +228,13 @@ export default function MCPPage({ state, logs, recentNudge, onSimulateTool, onSe
           {/* ── RIGHT: ALEXA + BEDROCK PANEL (5 cols) ───── */}
           <div className="xl:col-span-5 space-y-4">
 
+            {/* Voice Command Interface */}
+            <VoiceCommand onResult={(r) => console.log('[VoiceCommand result]', r)} />
+
             {/* Echo Show Simulation */}
             <div className={`border-2 bg-terminal-panel p-4 relative overflow-hidden ${echoGlow}`}
               style={{ transition: 'all 0.5s ease' }}>
+
               {/* Status bar */}
               <div className="flex items-center justify-between text-[9px] font-mono pb-3 border-b border-current/20 mb-4">
                 <div className="flex items-center gap-1.5">

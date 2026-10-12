@@ -1,313 +1,518 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield, Heart, Wind, Thermometer, Zap, Activity, AlertTriangle,
-  CheckCircle2, User, Clock, ArrowRight, Cpu, Radio, Terminal
+  Heart, Wind, Thermometer, Zap, Activity, AlertTriangle,
+  CheckCircle2, User, Clock, ArrowRight, Radio, Shield,
+  PhoneCall, Cpu, ChevronRight
 } from 'lucide-react';
 
+/* ─────────────────────────────────────────────────
+   Scenario metadata
+───────────────────────────────────────────────── */
+const SCENARIOS = {
+  nominal_morning:        { label: 'Nominal Morning',     urgency: 'NOMINAL',   score: 8,  accent: '#00FF41' },
+  missed_kitchen_routine: { label: 'Missed Kitchen',      urgency: 'MEDIUM',    score: 72, accent: '#FFD700' },
+  bathroom_fall_dwell:    { label: 'Night Fall Detected', urgency: 'CRITICAL',  score: 94, accent: '#FF3131' },
+  cardiovascular_drift:   { label: 'Cardiovascular Drift',urgency: 'HIGH',      score: 81, accent: '#FB923C' },
+};
+
+/* ─────────────────────────────────────────────────
+   Rose planetary globe (pure CSS)
+───────────────────────────────────────────────── */
+function RosePlanet({ urgency }) {
+  const glowColor =
+    urgency === 'CRITICAL' ? 'rgba(255,49,49,0.7)'  :
+    urgency === 'HIGH'     ? 'rgba(251,146,60,0.6)' :
+    urgency === 'MEDIUM'   ? 'rgba(255,215,0,0.5)'  :
+                             'rgba(243,153,179,0.55)';
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 340, height: 340 }}>
+      {/* Outer ambient glow */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: 340, height: 340,
+          background: `radial-gradient(circle at 50% 60%, ${glowColor} 0%, transparent 70%)`,
+          filter: 'blur(40px)',
+          opacity: 0.6,
+        }}
+      />
+      {/* Globe body */}
+      <div
+        className="relative rounded-full overflow-hidden"
+        style={{
+          width: 200, height: 200,
+          background: `radial-gradient(circle at 38% 35%, rgba(243,153,179,0.3) 0%, rgba(100,63,73,0.5) 40%, rgba(18,18,18,0.9) 100%)`,
+          boxShadow: `0 0 60px ${glowColor}, 0 0 120px rgba(243,153,179,0.15)`,
+          border: '1px solid rgba(243,153,179,0.2)',
+        }}
+      >
+        {/* Layered ring slices */}
+        {[0.85, 0.7, 0.55, 0.4].map((scale, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: `${scale * 100}%`,
+              height: `${scale * 100}%`,
+              top: `${(1 - scale) * 50}%`,
+              left: `${(1 - scale) * 50}%`,
+              border: '1px solid rgba(243,153,179,0.12)',
+              background: 'transparent',
+            }}
+          />
+        ))}
+        {/* Highlight glare */}
+        <div
+          className="absolute"
+          style={{
+            width: 60, height: 40,
+            top: 28, left: 30,
+            background: 'rgba(255,255,255,0.08)',
+            borderRadius: '50%',
+            filter: 'blur(8px)',
+          }}
+        />
+      </div>
+
+      {/* Urgency pulse ring */}
+      {urgency !== 'NOMINAL' && (
+        <div
+          className="absolute rounded-full animate-ping"
+          style={{
+            width: 220, height: 220,
+            border: `1px solid ${glowColor}`,
+            opacity: 0.3,
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────
+   Vital card
+───────────────────────────────────────────────── */
+function VitalCard({ label, value, unit, Icon, alert }) {
+  return (
+    <div
+      className="rounded-lg p-4 flex flex-col gap-2"
+      style={{
+        background: alert ? 'rgba(255,49,49,0.06)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${alert ? 'rgba(255,49,49,0.35)' : 'rgba(255,255,255,0.08)'}`,
+        transition: 'all 0.3s',
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <Icon size={13} color={alert ? '#FF3131' : '#F399B3'} />
+        <span className="sw-body text-xs" style={{ color: '#666', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {label}
+        </span>
+        {alert && <AlertTriangle size={11} color="#FF3131" className="ml-auto animate-pulse" />}
+      </div>
+      <div>
+        <span
+          className="sw-heading"
+          style={{ fontSize: 22, color: alert ? '#FF3131' : '#fff' }}
+        >
+          {value}
+        </span>
+        <span className="sw-body ml-1" style={{ fontSize: 12, color: '#555' }}>{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────
+   Scenario selector button
+───────────────────────────────────────────────── */
+function ScenarioBtn({ id, label, urgency, score, accent, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all"
+      style={{
+        background: active ? `${accent}0F` : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${active ? `${accent}40` : 'rgba(255,255,255,0.07)'}`,
+        cursor: 'pointer',
+      }}
+    >
+      <div>
+        <div className="sw-body text-sm" style={{ color: active ? '#fff' : '#888' }}>{label}</div>
+        <div className="sw-body text-xs mt-0.5" style={{ color: active ? accent : '#555' }}>{urgency}</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div
+          className="sw-heading text-base"
+          style={{ color: accent, opacity: active ? 1 : 0.5 }}
+        >
+          {score}%
+        </div>
+        <ChevronRight size={13} color={active ? accent : '#444'} />
+      </div>
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────────
+   Main HomePage
+───────────────────────────────────────────────── */
 export default function HomePage({ state, logs, onScenarioChange, onSimulateTool }) {
   const navigate = useNavigate();
   const [running, setRunning] = useState(false);
 
   const snapshot = state?.snapshot || {};
-  const vitals = snapshot.bee_wearable_vitals || {};
-  const profile = state?.resident_profile || {};
+  const vitals   = snapshot.bee_wearable_vitals || {};
+  const profile  = state?.resident_profile || {};
   const scenario = snapshot.active_scenario || 'nominal_morning';
-
-  const scenarioMeta = {
-    nominal_morning:        { label: 'NOMINAL MORNING', urgency: 'NOMINAL',   score: 8,  color: 'matrix' },
-    missed_kitchen_routine: { label: 'MISSED KITCHEN',  urgency: 'MEDIUM',    score: 72, color: 'warn' },
-    bathroom_fall_dwell:    { label: 'NIGHT FALL DWELL',urgency: 'CRITICAL',  score: 94, color: 'danger' },
-    cardiovascular_drift:   { label: 'CARDIO DRIFT',    urgency: 'HIGH',      score: 81, color: 'orange' },
-  };
-  const sm = scenarioMeta[scenario] || scenarioMeta.nominal_morning;
-
-  const urgencyStyle = {
-    matrix:  { text: 'text-matrix', border: 'border-matrix', bg: 'bg-matrix/10', bar: 'bg-matrix', glow: '0 0 15px rgba(0,255,65,0.5)' },
-    warn:    { text: 'text-yellow-400', border: 'border-yellow-400', bg: 'bg-yellow-400/10', bar: 'bg-yellow-400', glow: '0 0 15px rgba(255,215,0,0.4)' },
-    danger:  { text: 'text-red-400', border: 'border-red-500', bg: 'bg-red-500/10', bar: 'bg-red-500', glow: '0 0 15px rgba(255,49,49,0.5)' },
-    orange:  { text: 'text-orange-400', border: 'border-orange-400', bg: 'bg-orange-400/10', bar: 'bg-orange-400', glow: '0 0 15px rgba(251,146,60,0.4)' },
-  };
-  const us = urgencyStyle[sm.color];
+  const sm = SCENARIOS[scenario] || SCENARIOS.nominal_morning;
 
   const activeRooms = Object.entries(snapshot.room_motion_sensors || {})
     .filter(([, d]) => d.state === 'ACTIVE')
-    .map(([r]) => r.replace('_', ' ').toUpperCase());
+    .map(([r]) => r.replace(/_/g, ' '));
 
-  const recentActivity = logs.slice(0, 8);
+  const recentLogs = logs.slice(0, 6);
 
-  const handleRunAssessment = async () => {
+  const handleAssessment = async () => {
     setRunning(true);
-    try {
-      await onSimulateTool('eval_anomaly_risk', { focus_area: 'overall_wellbeing' });
-    } finally {
-      setRunning(false);
-    }
+    try { await onSimulateTool('eval_anomaly_risk', { focus_area: 'overall_wellbeing' }); }
+    finally { setRunning(false); }
   };
 
+  const VITAL_ITEMS = [
+    { label: 'Heart Rate', value: vitals.heart_rate_bpm || 72, unit: 'BPM', Icon: Heart, alert: (vitals.heart_rate_bpm || 72) > 100 },
+    { label: 'SpO2',       value: `${vitals.spo2_percent || 98}`, unit: '%', Icon: Wind, alert: (vitals.spo2_percent || 98) < 92 },
+    { label: 'Skin Temp',  value: vitals.skin_temp_c || 36.6, unit: '°C', Icon: Thermometer, alert: (vitals.skin_temp_c || 36.6) > 37.8 },
+    { label: 'Peak Impact',value: vitals.accelerometer_peak_g || 1.05, unit: 'G', Icon: Zap, alert: (vitals.accelerometer_peak_g || 1.05) > 3.0 },
+  ];
+
   return (
-    <div className="min-h-screen bg-terminal-black text-matrix font-mono">
-      <div className="max-w-screen-2xl mx-auto px-4 py-8 space-y-8">
+    <div className="min-h-screen" style={{ background: '#121212' }}>
 
-        {/* ── HERO HEADER ─────────────────────────────── */}
-        <div className="relative text-center py-10 border border-terminal-border overflow-hidden"
-          style={{ boxShadow: 'inset 0 0 40px rgba(0,255,65,0.04)' }}>
-          {/* Corner decorators */}
-          {['top-0 left-0', 'top-0 right-0', 'bottom-0 left-0', 'bottom-0 right-0'].map((pos, i) => (
-            <span key={i} className={`absolute ${pos} w-4 h-4 border-matrix ${
-              i === 0 ? 'border-t-2 border-l-2' : i === 1 ? 'border-t-2 border-r-2' :
-              i === 2 ? 'border-b-2 border-l-2' : 'border-b-2 border-r-2'}`}
-            />
-          ))}
+      {/* ── HERO SECTION ──────────────────────────────── */}
+      <section className="relative overflow-hidden" style={{ minHeight: 520 }}>
+        {/* Background planetary glow */}
+        <div
+          className="absolute"
+          style={{
+            right: -60, top: -40,
+            width: 500, height: 500,
+            background: 'radial-gradient(circle, rgba(243,153,179,0.12) 0%, transparent 65%)',
+            pointerEvents: 'none',
+          }}
+        />
 
-          {/* Decorative sparkles */}
-          <div className="absolute top-4 left-8 text-matrix opacity-40 text-xl select-none">✦</div>
-          <div className="absolute top-6 right-12 text-matrix opacity-30 text-sm select-none">✦</div>
-          <div className="absolute bottom-5 left-1/4 text-matrix opacity-20 text-xs select-none">✦</div>
+        <div className="max-w-screen-xl mx-auto px-6 pt-16 pb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
-          <div className="font-pixel text-matrix text-glow leading-relaxed"
-            style={{ fontSize: 'clamp(14px, 4vw, 32px)', letterSpacing: '0.1em' }}
-            data-text="AMBIENT GUARDIAN">
-            AMBIENT GUARDIAN
-          </div>
-          <div className="mt-3 text-[11px] font-mono text-terminal-muted tracking-widest uppercase">
-            {'>'} Proactive Health & Safety Intelligence System
-          </div>
-          <div className="mt-1 text-[10px] font-mono text-terminal-muted tracking-widest">
-            Alexa+ MCP Spec 2025-11-25&nbsp; // &nbsp;AWS Bedrock AgentCore&nbsp; // &nbsp;Amazon Hackathon 2026
-          </div>
-          <div className="mt-4 flex items-center justify-center gap-6 text-[10px] text-terminal-muted">
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-matrix rounded-full animate-pulse"/> RING SENSORS: ACTIVE</span>
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-matrix rounded-full animate-pulse"/> BEE WEARABLE: STREAMING</span>
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"/> BEDROCK: AGENTCORE</span>
-          </div>
-        </div>
-
-        {/* ── THREE MAIN CARDS ─────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-          {/* Card 1: Resident Profile */}
-          <div className="border border-terminal-border bg-terminal-panel p-5 space-y-4 relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-matrix" />
-            <div className="flex items-center gap-2 text-[10px] text-terminal-muted uppercase tracking-widest">
-              <User className="w-3 h-3 text-matrix" />
-              <span>// Resident Profile</span>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <div className="font-pixel text-matrix text-glow text-[10px]">{profile.first_name || 'Eleanor'} {profile.last_name || 'Vance'}</div>
-                <div className="text-[10px] text-terminal-muted mt-1">AGE: {profile.age || 78} // ID: {profile.resident_id || 'RES-8821'}</div>
+            {/* Left: headline + CTA */}
+            <div className="sw-reveal space-y-6">
+              {/* Tag */}
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full sw-body text-xs"
+                style={{
+                  background: 'rgba(243,153,179,0.08)',
+                  border: '1px solid rgba(243,153,179,0.2)',
+                  color: '#F399B3',
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+                Life & Safety Intelligence
               </div>
-              <div className="border-t border-terminal-border pt-3 space-y-1.5 text-[11px]">
-                {(profile.medical_notes || [
-                  'Hypertension (Lisinopril before 09:00)',
-                  'Mild Cognitive Impairment',
-                  'Elevated fall risk (osteopenia)',
-                ]).map((note, i) => (
-                  <div key={i} className="flex gap-2 text-terminal-muted">
-                    <span className="text-matrix flex-shrink-0">{'>'}</span>
-                    <span>{note}</span>
-                  </div>
+
+              {/* H1 */}
+              <h1
+                className="sw-heading text-white"
+                style={{ fontSize: 'clamp(32px,5vw,50px)' }}
+              >
+                Protect What<br />
+                <span style={{ color: '#F399B3' }} className="sw-rose-glow">
+                  Matters Most.
+                </span>
+              </h1>
+
+              {/* Subtitle */}
+              <p className="sw-body max-w-md" style={{ fontSize: 18, color: '#999' }}>
+                Ambient Guardian monitors {profile.first_name || 'Eleanor'}'s home 24/7 — combining
+                Ring sensors, Bee wearable vitals, and Alexa+ AI to detect falls and health
+                changes before they become emergencies.
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleAssessment}
+                  disabled={running}
+                  className="flex items-center gap-2 px-5 py-3 rounded-lg sw-body text-sm font-medium transition-all"
+                  style={{
+                    background: running ? 'rgba(243,153,179,0.3)' : '#F399B3',
+                    color: '#121212',
+                    cursor: running ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <Cpu size={15} />
+                  {running ? 'Analysing...' : 'Run AI Assessment'}
+                </button>
+                <button
+                  onClick={() => navigate('/console')}
+                  className="flex items-center gap-2 px-5 py-3 rounded-lg sw-body text-sm transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Open Console <ArrowRight size={14} />
+                </button>
+              </div>
+
+              {/* Status indicators */}
+              <div className="flex flex-wrap gap-4">
+                {[
+                  { label: 'Ring Sensors', color: '#00FF41' },
+                  { label: 'Bee Wearable', color: '#00FF41' },
+                  { label: 'Bedrock AI',   color: '#60A5FA' },
+                  { label: 'Alexa+',       color: '#F399B3' },
+                ].map(({ label, color }) => (
+                  <span key={label} className="flex items-center gap-1.5 sw-body text-xs" style={{ color: '#666' }}>
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color }} />
+                    {label}
+                  </span>
                 ))}
               </div>
-              <div className="border-t border-terminal-border pt-3 text-[10px] space-y-1">
-                <div className="text-terminal-muted">CAREGIVER // Dr. Sarah Vance</div>
-                <div className="text-matrix">+1-555-019-2831</div>
-              </div>
             </div>
-          </div>
 
-          {/* Card 2: Real-time Vitals */}
-          <div className="border border-terminal-border bg-terminal-panel p-5 space-y-4 relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-matrix" />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[10px] text-terminal-muted uppercase tracking-widest">
-                <Activity className="w-3 h-3 text-matrix" />
-                <span>// Bee Wearable Vitals</span>
-              </div>
-              <span className="text-[9px] font-mono text-matrix animate-pulse">● LIVE</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'HEART RATE', value: `${vitals.heart_rate_bpm || 72}`, unit: 'BPM', icon: Heart, alert: (vitals.heart_rate_bpm || 72) > 100, color: 'text-red-400' },
-                { label: 'SpO2', value: `${vitals.spo2_percent || 98}`, unit: '%', icon: Wind, alert: (vitals.spo2_percent || 98) < 92, color: 'text-blue-400' },
-                { label: 'SKIN TEMP', value: `${vitals.skin_temp_c || 36.6}`, unit: '°C', icon: Thermometer, alert: (vitals.skin_temp_c || 36.6) > 37.8, color: 'text-yellow-400' },
-                { label: 'PEAK IMPACT', value: `${vitals.accelerometer_peak_g || 1.05}`, unit: 'G', icon: Zap, alert: (vitals.accelerometer_peak_g || 1.05) > 3.0, color: 'text-purple-400' },
-              ].map(({ label, value, unit, icon: Icon, alert, color }) => (
-                <div key={label} className={`border p-3 ${alert ? 'border-red-500/60 bg-red-500/5' : 'border-terminal-border bg-terminal-black'}`}
-                  style={alert ? { boxShadow: '0 0 8px rgba(255,49,49,0.3)' } : {}}>
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Icon className={`w-3 h-3 ${alert ? 'text-red-400 animate-pulse' : color}`} />
-                    <span className="text-[9px] text-terminal-muted uppercase">{label}</span>
-                  </div>
-                  <div className={`font-pixel text-[12px] ${alert ? 'text-red-400 text-glow-danger' : 'text-matrix text-glow'}`}>
-                    {value}<span className="text-[8px] ml-1 text-terminal-muted">{unit}</span>
-                  </div>
-                  {alert && <div className="text-[9px] text-red-400 mt-1 animate-pulse">⚠ ALERT</div>}
+            {/* Right: Rose Planet + Anomaly Score */}
+            <div className="sw-reveal sw-reveal-delay-2 flex flex-col items-center gap-4">
+              <RosePlanet urgency={sm.urgency} />
+
+              {/* Score overlay */}
+              <div
+                className="text-center px-8 py-4 rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  marginTop: -20,
+                }}
+              >
+                <div className="sw-heading" style={{ fontSize: 36, color: sm.accent }}>
+                  {sm.score}%
                 </div>
-              ))}
-            </div>
-            <div className="text-[10px] text-terminal-muted border-t border-terminal-border pt-2">
-              STEPS: {vitals.step_count || 1840} // BATTERY: {vitals.battery_pct || 88}%
-              {vitals.fall_detected && <span className="ml-2 text-red-400 font-bold animate-pulse">// FALL DETECTED!</span>}
-            </div>
-          </div>
-
-          {/* Card 3: Anomaly Score */}
-          <div className={`border ${us.border} bg-terminal-panel p-5 space-y-4 relative overflow-hidden`}
-            style={{ boxShadow: us.glow }}>
-            <div className={`absolute top-0 left-0 right-0 h-0.5 ${us.bar}`} />
-            <div className="flex items-center gap-2 text-[10px] text-terminal-muted uppercase tracking-widest">
-              <Cpu className="w-3 h-3 text-matrix" />
-              <span>// Bedrock Triage</span>
-            </div>
-
-            <div className="text-center py-4 space-y-2">
-              <div className={`font-pixel text-[28px] ${us.text}`} style={{ textShadow: us.glow.replace('box', 'text') }}>
-                {sm.score}%
-              </div>
-              <div className={`font-pixel text-[10px] ${us.text} uppercase tracking-widest`}>
-                {sm.urgency}
+                <div className="sw-body text-xs mt-1" style={{ color: '#666', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Anomaly Risk · {sm.label}
+                </div>
               </div>
             </div>
 
-            {/* Block progress bar */}
-            <div>
-              <div className="flex gap-0.5">
-                {Array.from({ length: 20 }, (_, i) => (
-                  <div key={i} className={`flex-1 h-4 ${i < Math.round(sm.score / 5) ? us.bar : 'bg-terminal-border'}`} />
-                ))}
-              </div>
-              <div className="flex justify-between text-[9px] text-terminal-muted mt-1">
-                <span>NOMINAL</span><span>CRITICAL</span>
-              </div>
-            </div>
-
-            <div className="border-t border-terminal-border pt-3 text-[10px] text-terminal-muted space-y-1">
-              <div>SCENARIO: <span className="text-matrix">{sm.label}</span></div>
-              <div>MODEL: <span className="text-matrix">Claude 3.5 Sonnet v2</span></div>
-              <div>LATENCY: <span className="text-matrix">~380ms</span></div>
-            </div>
           </div>
         </div>
+      </section>
 
-        {/* ── ACTIVE SENSOR STATUS ──────────────────────── */}
-        <div className="border border-terminal-border bg-terminal-panel p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-[10px] text-terminal-muted uppercase tracking-widest">
-              <Radio className="w-3 h-3 text-matrix" />
-              <span>// Ring PIR Sensor Grid — Live Occupancy</span>
-            </div>
-            <button onClick={() => navigate('/sensors')} className="btn-pixel text-[10px] flex items-center gap-1">
-              CONTROL <ArrowRight className="w-3 h-3" />
-            </button>
+      {/* ── VITALS STRIP ──────────────────────────────── */}
+      <section className="max-w-screen-xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-5">
+          <div className="sw-heading text-white" style={{ fontSize: 22 }}>
+            Live Vitals
           </div>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          <div className="flex items-center gap-1.5 sw-body text-xs" style={{ color: '#F399B3' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+            Bee Wearable · Streaming
+          </div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {VITAL_ITEMS.map(v => <VitalCard key={v.label} {...v} />)}
+        </div>
+        <div className="mt-3 sw-body text-xs" style={{ color: '#444' }}>
+          Steps: {vitals.step_count || 1840} &nbsp;·&nbsp; Battery: {vitals.battery_pct || 88}%
+          {vitals.fall_detected && (
+            <span className="ml-3 text-red-400 animate-pulse font-medium">⚠ FALL DETECTED</span>
+          )}
+        </div>
+      </section>
+
+      {/* ── THREE COLUMN: Sensors / Scenarios / Contacts ── */}
+      <section className="max-w-screen-xl mx-auto px-6 pb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Room Occupancy */}
+        <div
+          className="rounded-xl p-5 space-y-4"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2">
+            <Radio size={14} color="#F399B3" />
+            <span className="sw-heading text-white" style={{ fontSize: 16 }}>Room Occupancy</span>
+          </div>
+          <div className="space-y-2">
             {Object.entries(snapshot.room_motion_sensors || {
-              bedroom: { state: 'INACTIVE', sensor_id: 'ring_mot_bed_01' },
-              bathroom: { state: 'INACTIVE', sensor_id: 'ring_mot_bath_01' },
-              kitchen: { state: 'ACTIVE', sensor_id: 'ring_mot_kitch_01' },
-              living_room: { state: 'INACTIVE', sensor_id: 'ring_mot_liv_01' },
-              hallway: { state: 'INACTIVE', sensor_id: 'ring_mot_hall_01' },
-              front_door: { state: 'INACTIVE', sensor_id: 'ring_mot_entry_01' },
-            }).map(([room, data]) => {
-              const isActive = data.state === 'ACTIVE';
-              return (
-                <div key={room} className={`border p-3 text-center ${isActive ? 'border-yellow-500/70 bg-yellow-500/5' : 'border-terminal-border'}`}
-                  style={isActive ? { boxShadow: '0 0 8px rgba(255,215,0,0.25)' } : {}}>
-                  <div className={`w-2 h-2 rounded-full mx-auto mb-2 ${isActive ? 'bg-yellow-400 animate-pulse' : 'bg-terminal-muted'}`} />
-                  <div className="text-[9px] font-mono uppercase text-terminal-muted">{room.replace('_', ' ')}</div>
-                  <div className={`text-[9px] font-bold mt-1 ${isActive ? 'text-yellow-400' : 'text-terminal-muted'}`}>
-                    {isActive ? 'MOTION' : 'CLEAR'}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── QUICK ACTIONS + ACTIVITY ──────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-          {/* Quick Actions */}
-          <div className="border border-terminal-border bg-terminal-panel p-5 space-y-4">
-            <div className="text-[10px] text-terminal-muted uppercase tracking-widest">// Quick Actions</div>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={handleRunAssessment} disabled={running}
-                className="btn-pixel-solid text-[11px] py-3 flex items-center justify-center gap-2">
-                <Cpu className="w-3.5 h-3.5" />
-                {running ? 'ANALYZING...' : 'RUN ASSESSMENT'}
-              </button>
-              <button onClick={() => navigate('/sensors')}
-                className="btn-pixel text-[11px] py-3 flex items-center justify-center gap-2">
-                <Radio className="w-3.5 h-3.5" />
-                SENSOR CTRL
-              </button>
-              <button onClick={() => navigate('/console')}
-                className="btn-pixel text-[11px] py-3 flex items-center justify-center gap-2">
-                <Terminal className="w-3.5 h-3.5" />
-                MCP CONSOLE
-              </button>
-              <button onClick={() => onSimulateTool('trigger_voice_nudge', { resident_id: 'RES-8821', tone: 'gentle' })}
-                className="btn-pixel text-[11px] py-3 flex items-center justify-center gap-2">
-                <Zap className="w-3.5 h-3.5" />
-                VOICE NUDGE
-              </button>
-            </div>
-            <div className="border-t border-terminal-border pt-3 space-y-1 text-[10px]">
-              <div className="text-terminal-muted">Load Preset Scenario:</div>
-              <div className="grid grid-cols-2 gap-1">
-                {(state?.available_scenarios || []).map(sc => (
-                  <button key={sc.id} onClick={() => onScenarioChange(sc.id)}
-                    className={`text-left px-2 py-1.5 border text-[10px] font-mono transition-all ${
-                      snapshot.active_scenario === sc.id
-                        ? 'border-matrix text-matrix bg-matrix/5'
-                        : 'border-terminal-border text-terminal-muted hover:border-matrix/40 hover:text-matrix/60'
-                    }`}>
-                    {'>'} {sc.urgency} // {sc.id.replace(/_/g,' ').toUpperCase().slice(0,18)}
-                  </button>
-                ))}
+              bedroom: { state: 'INACTIVE' }, bathroom: { state: 'INACTIVE' },
+              kitchen: { state: 'ACTIVE'   }, living_room: { state: 'INACTIVE' },
+              hallway: { state: 'INACTIVE' },
+            }).map(([room, data]) => (
+              <div key={room} className="flex items-center justify-between">
+                <span className="sw-body text-sm capitalize" style={{ color: '#888' }}>
+                  {room.replace(/_/g, ' ')}
+                </span>
+                <span
+                  className="sw-body text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: data.state === 'ACTIVE' ? 'rgba(0,255,65,0.1)' : 'rgba(255,255,255,0.04)',
+                    color: data.state === 'ACTIVE' ? '#00FF41' : '#444',
+                    border: `1px solid ${data.state === 'ACTIVE' ? 'rgba(0,255,65,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                  }}
+                >
+                  {data.state}
+                </span>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Scenario Selector */}
+        <div
+          className="rounded-xl p-5 space-y-3"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Activity size={14} color="#F399B3" />
+            <span className="sw-heading text-white" style={{ fontSize: 16 }}>Simulate Scenario</span>
+          </div>
+          <div className="space-y-2">
+            {Object.entries(SCENARIOS).map(([id, sc]) => (
+              <ScenarioBtn
+                key={id}
+                id={id}
+                {...sc}
+                active={scenario === id}
+                onClick={() => onScenarioChange(id)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Resident + Contacts */}
+        <div
+          className="rounded-xl p-5 space-y-4"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center gap-2">
+            <User size={14} color="#F399B3" />
+            <span className="sw-heading text-white" style={{ fontSize: 16 }}>Resident Profile</span>
+          </div>
+
+          {/* Resident */}
+          <div className="space-y-1">
+            <div className="sw-heading text-white" style={{ fontSize: 18 }}>
+              {profile.first_name || 'Eleanor'} {profile.last_name || 'Vance'}
+            </div>
+            <div className="sw-body text-xs" style={{ color: '#555' }}>
+              Age {profile.age || 78} · ID RES-8821
             </div>
           </div>
 
-          {/* Activity Log */}
-          <div className="border border-terminal-border bg-terminal-panel p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-[10px] text-terminal-muted uppercase tracking-widest">// Activity Feed</div>
-              <button onClick={() => navigate('/console')} className="text-[10px] text-matrix hover:underline">
-                VIEW ALL →
-              </button>
+          {/* Medical notes */}
+          <div className="space-y-1.5">
+            {(profile.medical_notes || [
+              'Hypertension — Lisinopril before 09:00',
+              'Mild Cognitive Impairment',
+              'Elevated fall risk (osteopenia)',
+            ]).map((n, i) => (
+              <div key={i} className="flex gap-2 sw-body text-xs" style={{ color: '#777' }}>
+                <span style={{ color: '#F399B3', flexShrink: 0 }}>›</span>
+                {n}
+              </div>
+            ))}
+          </div>
+
+          {/* Escalation contacts */}
+          <div
+            className="rounded-lg p-3 space-y-2"
+            style={{ background: 'rgba(243,153,179,0.05)', border: '1px solid rgba(243,153,179,0.15)' }}
+          >
+            <div className="flex items-center gap-1.5 sw-body text-xs" style={{ color: '#F399B3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <PhoneCall size={11} />
+              Emergency Escalation
             </div>
-            <div className="space-y-1 h-52 overflow-y-auto">
-              {recentActivity.length === 0 ? (
-                <div className="text-[10px] text-terminal-muted py-4">{'>'} Awaiting events... <span className="cursor" /></div>
-              ) : recentActivity.map(log => (
-                <div key={log.id} className="flex gap-2 text-[10px] animate-slide-in border-b border-terminal-border/30 pb-1">
-                  <span className="text-terminal-muted flex-shrink-0">
-                    {log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false }) : '??:??:??'}
-                  </span>
-                  <span className="text-terminal-muted">//</span>
-                  <span className={
-                    log.direction?.includes('SECURITY') ? 'text-red-400' :
-                    log.direction?.includes('NUDGE') ? 'text-blue-400' :
-                    log.tool ? 'text-yellow-400' : 'text-matrix/80'
-                  }>
-                    {log.tool ? `tools/${log.tool}` : log.category || log.direction || 'event'}
-                    {log.execution_ms ? ` (${log.execution_ms}ms)` : ''}
-                  </span>
+            {[
+              { name: 'Dr. Sarah Vance', role: 'Daughter / Primary Caregiver', phone: '+1-555-019-2831' },
+              { name: 'Margaret Chen',   role: 'Next-door Neighbour',          phone: '+1-555-034-7712' },
+            ].map(c => (
+              <div key={c.name} className="space-y-0.5">
+                <div className="sw-body text-xs text-white">{c.name}</div>
+                <div className="sw-body text-xs" style={{ color: '#555' }}>{c.role}</div>
+                <div className="sw-body text-xs" style={{ color: '#F399B3' }}>{c.phone}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── LIVE LOG FEED ──────────────────────────────── */}
+      <section className="max-w-screen-xl mx-auto px-6 pb-16">
+        <div className="flex items-center justify-between mb-4">
+          <div className="sw-heading text-white" style={{ fontSize: 20 }}>Live Event Feed</div>
+          <button
+            onClick={() => navigate('/console')}
+            className="flex items-center gap-1 sw-body text-xs transition-colors"
+            style={{ color: '#F399B3', cursor: 'pointer', background: 'none', border: 'none' }}
+          >
+            Full Console <ArrowRight size={12} />
+          </button>
+        </div>
+        <div className="space-y-2">
+          {recentLogs.length === 0 ? (
+            <div
+              className="rounded-lg px-4 py-8 text-center sw-body text-sm"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#444' }}
+            >
+              Awaiting live events — run an assessment or trigger a scenario above.
+            </div>
+          ) : recentLogs.map((log, i) => {
+            const dir = log.direction || '';
+            const accent =
+              dir.includes('NUDGE')        ? '#F399B3' :
+              dir.includes('SECURITY')     ? '#FF3131' :
+              dir.includes('GEMINI')       ? '#60A5FA' :
+              dir.includes('VOICE')        ? '#A78BFA' :
+              dir.includes('TELEMETRY')    ? '#00FF41' :
+                                             '#555';
+            return (
+              <div
+                key={i}
+                className="flex items-start gap-3 rounded-lg px-4 py-3"
+                style={{
+                  background: 'rgba(255,255,255,0.025)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: accent }} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="sw-body text-xs font-medium" style={{ color: accent }}>
+                      {dir || 'LOG'}
+                    </span>
+                    {log.category && (
+                      <span className="sw-body text-xs" style={{ color: '#444' }}>
+                        · {log.category}
+                      </span>
+                    )}
+                  </div>
+                  {log.payload?.voice_script && (
+                    <div className="sw-body text-xs mt-0.5" style={{ color: '#777' }}>
+                      {log.payload.voice_script}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
+                <span className="sw-body text-xs flex-shrink-0" style={{ color: '#333' }}>
+                  {log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false }) : ''}
+                </span>
+              </div>
+            );
+          })}
         </div>
+      </section>
 
-        {/* ── FOOTER ─────────────────────────────────────── */}
-        <div className="border-t border-terminal-border pt-4 flex items-center justify-between text-[9px] text-terminal-muted font-mono">
-          <span>PROJECT AMBIENT GUARDIAN // BUILD, SHIP, SHAPE 2026 // MIT LICENSE</span>
-          <span>MCP SPEC 2025-11-25 // STREAMABLE HTTP/SSE // BEDROCK AGENTCORE</span>
-        </div>
-      </div>
     </div>
   );
 }

@@ -1,105 +1,107 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { Shield, Radio, Cpu, Terminal, Wifi, WifiOff } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { Shield, Wifi, WifiOff } from 'lucide-react';
+import AnnouncementTicker from './AnnouncementTicker.jsx';
 
 export default function Navbar({ connectionStatus, activeScenario }) {
-  const [time, setTime] = useState(new Date());
-  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(t);
+    const handler = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  const urgencyFromScenario = {
-    nominal_morning: { label: 'NOMINAL', color: 'text-matrix' },
-    missed_kitchen_routine: { label: 'MEDIUM', color: 'text-warn-DEFAULT' },
-    bathroom_fall_dwell: { label: 'CRITICAL', color: 'text-danger-DEFAULT' },
-    cardiovascular_drift: { label: 'HIGH', color: 'text-orange-400' },
-  };
-  const urgency = urgencyFromScenario[activeScenario] || { label: 'NOMINAL', color: 'text-matrix' };
-
-  const navItems = [
-    { to: '/',        label: '// HOME',    icon: Shield },
-    { to: '/sensors', label: '// SENSORS', icon: Radio },
-    { to: '/console', label: '// CONSOLE', icon: Terminal },
-  ];
+  const scenarioLabel = {
+    nominal_morning:        { text: 'NOMINAL',  color: '#00FF41' },
+    missed_kitchen_routine: { text: 'MEDIUM',   color: '#FFD700' },
+    bathroom_fall_dwell:    { text: 'CRITICAL', color: '#FF3131' },
+    cardiovascular_drift:   { text: 'HIGH',     color: '#FB923C' },
+  }[activeScenario] || { text: 'NOMINAL', color: '#00FF41' };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-terminal-border bg-terminal-black/95 backdrop-blur">
-      {/* Top bar: decorative */}
-      <div className="h-0.5 bg-gradient-to-r from-transparent via-matrix to-transparent" />
+    <header
+      style={{
+        background: scrolled
+          ? 'rgba(18,18,18,0.92)'
+          : 'rgba(18,18,18,0.75)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        transition: 'background 0.3s',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+      }}
+    >
+      {/* Ticker */}
+      <AnnouncementTicker />
 
-      <div className="max-w-screen-2xl mx-auto px-4 flex items-center justify-between h-14">
-
+      {/* Main nav bar */}
+      <div
+        className="max-w-screen-xl mx-auto flex items-center justify-between px-6"
+        style={{ height: 60 }}
+      >
         {/* Logo */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="relative w-8 h-8 flex items-center justify-center border border-matrix"
-            style={{ boxShadow: '0 0 10px rgba(0,255,65,0.4)' }}>
-            <Shield className="w-4 h-4 text-matrix" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-matrix animate-pulse" />
+        <NavLink to="/" className="flex items-center gap-2.5 no-underline">
+          <div
+            className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg,#F399B3 0%,#643F49 100%)',
+              boxShadow: '0 0 18px rgba(243,153,179,0.4)',
+            }}
+          >
+            <Shield size={14} color="#fff" />
           </div>
           <div>
-            <div className="font-pixel text-matrix text-[9px] leading-tight text-glow">
-              AMBIENT<br />GUARDIAN
+            <div
+              className="sw-heading text-white"
+              style={{ fontSize: 15, letterSpacing: '-0.02em', lineHeight: 1.1 }}
+            >
+              Ambient Guardian
+            </div>
+            <div
+              className="sw-body"
+              style={{ fontSize: 10, color: '#999', marginTop: 1 }}
+            >
+              Life & Safety AI
             </div>
           </div>
-          <div className="hidden sm:block w-px h-8 bg-terminal-border mx-2" />
-          <div className="hidden sm:block text-[10px] font-mono text-terminal-muted">
-            v1.0.0 // MCP 2025-11-25
-          </div>
-        </div>
+        </NavLink>
 
-        {/* Nav Links */}
-        <div className="flex items-center gap-1">
-          {navItems.map(({ to, label, icon: Icon }) => {
-            const isActive = location.pathname === to;
-            return (
-              <NavLink
-                key={to}
-                to={to}
-                className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-all border-b-2 ${
-                  isActive
-                    ? 'text-matrix border-matrix text-glow'
-                    : 'text-terminal-muted border-transparent hover:text-matrix/70 hover:border-matrix/40'
-                }`}
-              >
-                <Icon className="w-3 h-3" />
-                <span className="hidden sm:inline">{label}</span>
-              </NavLink>
-            );
-          })}
-        </div>
-
-        {/* Right Status Cluster */}
-        <div className="flex items-center gap-3 text-[10px] font-mono flex-shrink-0">
-          {/* Active Scenario */}
-          <div className="hidden md:flex items-center gap-1.5 border border-terminal-border px-2 py-1">
-            <span className="text-terminal-muted">SCENARIO:</span>
-            <span className={`font-bold ${urgency.color}`}>{urgency.label}</span>
-          </div>
-
-          {/* SSE Status */}
-          <div className={`flex items-center gap-1.5 border px-2 py-1 ${
-            connectionStatus === 'connected'
-              ? 'border-matrix/50 text-matrix'
-              : 'border-danger-DEFAULT/50 text-danger-DEFAULT'
-          }`}>
+        {/* Status pills */}
+        <div className="flex items-center gap-3">
+          {/* Connection status */}
+          <div
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full sw-body text-xs"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              color: connectionStatus === 'connected' ? '#00FF41' : '#FF3131',
+            }}
+          >
             {connectionStatus === 'connected'
-              ? <><span className="w-1.5 h-1.5 rounded-full bg-matrix animate-pulse" /><span>LIVE</span></>
-              : <><span className="w-1.5 h-1.5 rounded-full bg-danger-DEFAULT" /><span>OFFLINE</span></>
-            }
+              ? <Wifi size={11} />
+              : <WifiOff size={11} />}
+            {connectionStatus === 'connected' ? 'LIVE' : 'OFFLINE'}
           </div>
 
-          {/* Clock */}
-          <div className="hidden lg:block text-terminal-muted border border-terminal-border px-2 py-1 font-pixel text-[8px]">
-            {time.toLocaleTimeString('en-US', { hour12: false })}
+          {/* Urgency badge */}
+          <div
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full sw-body text-xs font-medium"
+            style={{
+              background: `${scenarioLabel.color}14`,
+              border: `1px solid ${scenarioLabel.color}44`,
+              color: scenarioLabel.color,
+            }}
+          >
+            <span
+              className="animate-pulse inline-block rounded-full"
+              style={{ width: 6, height: 6, background: scenarioLabel.color }}
+            />
+            {scenarioLabel.text}
           </div>
         </div>
       </div>
-
-      {/* Active page indicator bar */}
-      <div className="h-px bg-terminal-border" />
-    </nav>
+    </header>
   );
 }

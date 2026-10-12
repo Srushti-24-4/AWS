@@ -30,6 +30,17 @@ export default {
           DEFAULT: '#FFD700',
           dim: '#7A6000',
         },
+        /* ── Starwave dark design tokens ── */
+        sw: {
+          bg:      '#121212',
+          panel:   '#0E0E0E',
+          surface: '#262626',
+          rose:    '#F399B3',
+          'rose-hover': '#643F49',
+          body:    '#999999',
+          tag:     '#E9E7E8',
+          border:  'rgba(255,255,255,0.12)',
+        },
       },
       fontFamily: {
         pixel: ['"Press Start 2P"', 'monospace'],
