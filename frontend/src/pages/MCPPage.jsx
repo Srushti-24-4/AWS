@@ -1,19 +1,10 @@
 import React, { useState } from 'react';
 import {
-  Terminal, Cpu, Zap, Send, AlertOctagon, Search, Trash2,
+  Terminal, Cpu, Send, AlertOctagon, Search, Trash2,
   Copy, Check, Clock, ChevronDown, ChevronRight, Volume2, VolumeX,
-  PhoneCall, User, BrainCircuit, ShieldCheck, Radio, Mic
+  PhoneCall, User, BrainCircuit, ShieldCheck, Radio, Mic, Activity, Layers, Sparkles
 } from 'lucide-react';
 import VoiceCommand from '../components/VoiceCommand.jsx';
-
-
-const URGENCY_STYLE = {
-  NOMINAL:  { text: 'text-matrix',     bar: 'bg-matrix',    glow: '0 0 12px rgba(0,255,65,0.4)' },
-  LOW:      { text: 'text-matrix',     bar: 'bg-matrix',    glow: '0 0 12px rgba(0,255,65,0.3)' },
-  MEDIUM:   { text: 'text-yellow-400', bar: 'bg-yellow-400',glow: '0 0 12px rgba(255,215,0,0.4)' },
-  HIGH:     { text: 'text-orange-400', bar: 'bg-orange-400',glow: '0 0 12px rgba(251,146,60,0.4)' },
-  CRITICAL: { text: 'text-red-400',    bar: 'bg-red-500',   glow: '0 0 15px rgba(255,49,49,0.6)' },
-};
 
 export default function MCPPage({ state, logs, recentNudge, onSimulateTool, onSendResponse }) {
   const [filter, setFilter]   = useState('ALL');
@@ -34,21 +25,21 @@ export default function MCPPage({ state, logs, recentNudge, onSimulateTool, onSe
   const isHigh      = scenario === 'cardiovascular_drift';
   const isMedium    = scenario === 'missed_kitchen_routine';
 
-  const scoreMap  = { bathroom_fall_dwell: 94, cardiovascular_drift: 81, missed_kitchen_routine: 72, nominal_morning: 8 };
+  const scoreMap = { bathroom_fall_dwell: 94, cardiovascular_drift: 81, missed_kitchen_routine: 72, nominal_morning: 8 };
   const urgencyMap = { bathroom_fall_dwell: 'CRITICAL', cardiovascular_drift: 'HIGH', missed_kitchen_routine: 'MEDIUM', nominal_morning: 'NOMINAL' };
-  const score   = scoreMap[scenario]   || 8;
+  const score   = scoreMap[scenario] || 8;
   const urgency = urgencyMap[scenario] || 'NOMINAL';
-  const us      = URGENCY_STYLE[urgency];
 
-  const echoGlow = isEmergency ? 'border-red-500 shadow-[0_0_35px_rgba(255,49,49,0.5)]'
-                 : isHigh      ? 'border-orange-400 shadow-[0_0_25px_rgba(251,146,60,0.4)]'
-                 : isMedium    ? 'border-yellow-400 shadow-[0_0_20px_rgba(255,215,0,0.3)]'
-                 :               'border-matrix shadow-[0_0_20px_rgba(0,255,65,0.25)]';
+  const urgencyAccent =
+    urgency === 'CRITICAL' ? '#FF3131' :
+    urgency === 'HIGH'     ? '#FB923C' :
+    urgency === 'MEDIUM'   ? '#FFD700' :
+                             '#00FF41';
 
   const TOOLS = [
-    { name: 'get_ambient_status', label: 'GET STATUS',  args: { include_wearable: true }, color: 'text-blue-400',  icon: Radio },
-    { name: 'eval_anomaly_risk',  label: 'EVAL ANOMALY',args: { focus_area: 'overall_wellbeing' }, color: 'text-yellow-400', icon: Cpu },
-    { name: 'trigger_voice_nudge',label: 'VOICE NUDGE', args: { resident_id: 'RES-8821', tone: 'gentle' }, color: 'text-matrix', icon: Send },
+    { name: 'get_ambient_status', label: 'Get Ambient Status', args: { include_wearable: true }, color: '#60A5FA', icon: Radio, desc: 'Fetch Ring & Bee sensors' },
+    { name: 'eval_anomaly_risk',  label: 'Eval Anomaly Risk',  args: { focus_area: 'overall_wellbeing' }, color: '#FFD700', icon: Cpu, desc: 'AWS Bedrock AgentCore triage' },
+    { name: 'trigger_voice_nudge',label: 'Trigger Voice Nudge',args: { resident_id: 'RES-8821', tone: 'gentle' }, color: '#F399B3', icon: Send, desc: 'Empathetic Alexa proactive check' },
   ];
 
   const callTool = async (name, args) => {
@@ -92,129 +83,227 @@ export default function MCPPage({ state, logs, recentNudge, onSimulateTool, onSe
     } finally { setSubmitting(false); }
   };
 
-  const dirColor = (dir) => {
-    if (!dir) return 'border-terminal-border text-terminal-muted';
-    if (dir.includes('SECURITY'))       return 'border-red-500/70 text-red-400 bg-red-500/5';
-    if (dir.includes('NUDGE'))          return 'border-matrix/60 text-matrix bg-matrix/5';
-    if (dir.includes('VOICE_COMMAND'))  return 'border-purple-400/60 text-purple-300 bg-purple-500/5';
-    if (dir.includes('GEMINI'))         return 'border-blue-400/60 text-blue-300 bg-blue-500/5';
-    if (dir.includes('TOOL') || dir.includes('SIMULATED')) return 'border-yellow-500/60 text-yellow-400 bg-yellow-400/5';
-    return 'border-terminal-border text-terminal-muted';
+  const logAccent = (dir) => {
+    if (!dir) return '#999';
+    if (dir.includes('SECURITY'))       return '#FF3131';
+    if (dir.includes('NUDGE'))          return '#F399B3';
+    if (dir.includes('VOICE_COMMAND'))  return '#C084FC';
+    if (dir.includes('GEMINI'))         return '#60A5FA';
+    if (dir.includes('TOOL') || dir.includes('SIMULATED')) return '#FFD700';
+    if (dir.includes('TELEMETRY'))      return '#00FF41';
+    return '#999';
   };
 
-
   return (
-    <div className="min-h-screen bg-terminal-black text-matrix font-mono">
-      <div className="max-w-screen-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen text-white pb-16" style={{ background: '#121212' }}>
+      <div className="max-w-screen-xl mx-auto px-6 py-8 space-y-8">
 
-        {/* ── PAGE HEADER ─────────────────────────────── */}
-        <div className="flex items-center justify-between border-b border-terminal-border pb-4 mb-6">
+        {/* ── HEADER ───────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b"
+          style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <div>
-            <div className="font-pixel text-matrix text-glow text-[11px]">{'>'} MCP Protocol Console</div>
-            <div className="text-[10px] text-terminal-muted mt-1">
-              JSON-RPC 2.0 Streamable HTTP/SSE // Alexa+ Integration // Bedrock AgentCore Triage
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full sw-body text-xs mb-2"
+              style={{ background: 'rgba(243,153,179,0.08)', border: '1px solid rgba(243,153,179,0.2)', color: '#F399B3' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+              Streamable HTTP & SSE Protocol Spec 2025-11-25
             </div>
+            <h1 className="sw-heading text-2xl md:text-3xl text-white">
+              MCP Protocol Console
+            </h1>
+            <p className="sw-body text-sm mt-1" style={{ color: '#999' }}>
+              Inspect live JSON-RPC traffic, invoke Alexa+ MCP tools, and audit prompt injection defenses.
+            </p>
           </div>
-          <div className="flex gap-2 text-[9px]">
-            <span className="border border-matrix/60 text-matrix px-2 py-1">MCP SPEC 2025-11-25</span>
-            <span className="border border-blue-400/60 text-blue-400 px-2 py-1">STREAMABLE HTTP</span>
+
+          <div className="flex items-center gap-2">
+            <span className="sw-body text-xs px-3 py-1.5 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: '#999' }}>
+              SESSION: <span className="text-white font-mono">ACTIVE</span>
+            </span>
+            <span className="sw-body text-xs px-3 py-1.5 rounded-full font-medium"
+              style={{ background: `${urgencyAccent}14`, border: `1px solid ${urgencyAccent}40`, color: urgencyAccent }}>
+              ● {urgency} ({score}%)
+            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-
-          {/* ── LEFT: MCP LOG INSPECTOR (7 cols) ────────── */}
-          <div className="xl:col-span-7 space-y-4">
-
-            {/* Tool Quick-Call Row */}
-            <div className="border border-terminal-border bg-terminal-panel p-4 space-y-3">
-              <div className="text-[10px] text-terminal-muted uppercase tracking-widest">// Invoke MCP tools/call</div>
-              <div className="flex flex-wrap gap-2">
-                {TOOLS.map(({ name, label, args, color, icon: Icon }) => (
-                  <button key={name} onClick={() => callTool(name, args)}
-                    disabled={calling !== null}
-                    className={`btn-pixel text-[10px] flex items-center gap-1.5 ${color}`}>
-                    <Icon className="w-3 h-3" />
-                    {calling === name ? 'CALLING...' : label}
-                  </button>
-                ))}
-                <button onClick={testInjection} disabled={calling !== null}
-                  className="btn-pixel btn-pixel-danger text-[10px] flex items-center gap-1.5">
-                  <AlertOctagon className="w-3 h-3" />
-                  {calling === 'injection' ? 'TESTING...' : 'TEST INJECTION DEFENSE'}
-                </button>
-              </div>
+        {/* ── TOOL DISPATCH DECK ───────────────────────── */}
+        <div className="rounded-2xl p-5 space-y-3"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Terminal size={15} color="#F399B3" />
+              <span className="sw-heading text-sm font-medium text-white">Invoke MCP Tools (JSON-RPC 2.0)</span>
             </div>
+            <button
+              onClick={testInjection}
+              disabled={calling !== null}
+              className="sw-body text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all"
+              style={{
+                background: 'rgba(255,49,49,0.08)',
+                border: '1px solid rgba(255,49,49,0.3)',
+                color: '#FF3131',
+                cursor: calling ? 'not-allowed' : 'pointer'
+              }}
+              title="Sends a prompt injection exploit to verify rejection"
+            >
+              <AlertOctagon size={13} />
+              {calling === 'injection' ? 'Testing Defense...' : 'Test Injection Defense'}
+            </button>
+          </div>
 
-            {/* Filter + Search bar */}
-            <div className="border border-terminal-border bg-terminal-panel p-3 flex flex-wrap items-center gap-2">
-              <div className="flex gap-1">
-                {['ALL', 'JSON-RPC', 'TOOLS', 'SECURITY', 'NUDGES'].map(tab => (
-                  <button key={tab} onClick={() => setFilter(tab)}
-                    className={`text-[9px] font-pixel px-2 py-1 border transition-all ${
-                      filter === tab
-                        ? 'border-matrix bg-matrix text-terminal-black'
-                        : 'border-terminal-border text-terminal-muted hover:border-matrix/50'
-                    }`}>{tab}</button>
-                ))}
-              </div>
-              <div className="flex-1 flex gap-2 min-w-0">
-                <div className="relative flex-1">
-                  <Search className="w-3 h-3 absolute left-2 top-1.5 text-terminal-muted" />
-                  <input type="text" placeholder="Search logs..." value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="bg-terminal-black border border-terminal-border text-[10px] rounded-none pl-6 pr-2 py-1 text-matrix w-full focus:outline-none focus:border-matrix font-mono" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            {TOOLS.map(({ name, label, args, color, icon: Icon, desc }) => (
+              <button
+                key={name}
+                onClick={() => callTool(name, args)}
+                disabled={calling !== null}
+                className="text-left p-3.5 rounded-xl transition-all flex flex-col justify-between"
+                style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  cursor: calling ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(243,153,179,0.4)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    style={{ background: `${color}18`, border: `1px solid ${color}33` }}>
+                    <Icon size={14} color={color} />
+                  </div>
+                  <span className="sw-body text-[11px]" style={{ color: color }}>
+                    {calling === name ? 'Executing...' : 'Invoke →'}
+                  </span>
                 </div>
-                <button onClick={() => {}} title="Clear" className="btn-pixel text-[9px] px-2">
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
+                <div>
+                  <div className="sw-heading text-sm text-white font-medium">{label}</div>
+                  <div className="sw-body text-xs mt-0.5" style={{ color: '#777' }}>{desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {/* Log Stream */}
-            <div className="border border-terminal-border bg-terminal-black h-[480px] overflow-y-auto">
-              <div className="p-3 space-y-1.5">
+        {/* ── TWO-COLUMN MAIN WORKSPACE ────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          {/* LEFT: LOG INSPECTOR (7 cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="rounded-2xl p-5 space-y-4"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Activity size={15} color="#F399B3" />
+                  <span className="sw-heading text-sm text-white">Live Audit Log Feed</span>
+                  <span className="sw-body text-xs px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(243,153,179,0.1)', color: '#F399B3' }}>
+                    {filteredLogs.length} events
+                  </span>
+                </div>
+
+                {/* Filter tags */}
+                <div className="flex flex-wrap gap-1.5">
+                  {['ALL', 'TOOLS', 'NUDGES', 'SECURITY', 'JSON-RPC'].map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className="sw-body text-xs px-2.5 py-1 rounded-full transition-all"
+                      style={{
+                        background: filter === f ? '#F399B3' : 'rgba(255,255,255,0.04)',
+                        color: filter === f ? '#121212' : '#888',
+                        border: `1px solid ${filter === f ? '#F399B3' : 'rgba(255,255,255,0.08)'}`,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Search bar */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-3 text-neutral-500" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Filter payload, resident ID, tool name..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl text-xs sw-body text-white placeholder-neutral-500 focus:outline-none"
+                  style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                />
+              </div>
+
+              {/* Log List */}
+              <div className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
                 {filteredLogs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-32 text-terminal-muted text-[10px]">
-                    <Terminal className="w-6 h-6 mb-2 opacity-30" />
-                    <span>{'>'} No logs matching filter. Call a tool above. <span className="cursor" /></span>
+                  <div className="p-8 text-center sw-body text-xs rounded-xl"
+                    style={{ background: 'rgba(0,0,0,0.2)', border: '1px dashed rgba(255,255,255,0.1)', color: '#666' }}>
+                    No audit records match the current filter.
                   </div>
                 ) : filteredLogs.map(log => {
-                  const isExp = expanded[log.id];
-                  const dc    = dirColor(log.direction);
+                  const isExp = !!expanded[log.id];
+                  const accent = logAccent(log.direction);
                   return (
-                    <div key={log.id} className={`border text-[10px] font-mono transition-all animate-slide-in ${dc}`}>
-                      <div onClick={() => setExpanded(p => ({ ...p, [log.id]: !p[log.id] }))}
-                        className="flex items-center justify-between p-2 cursor-pointer hover:bg-matrix/5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {isExp ? <ChevronDown className="w-3 h-3 flex-shrink-0 text-terminal-muted" />
-                                 : <ChevronRight className="w-3 h-3 flex-shrink-0 text-terminal-muted" />}
-                          <span className="font-pixel text-[8px] uppercase px-1.5 py-0.5 border border-current opacity-80 flex-shrink-0">
+                    <div
+                      key={log.id}
+                      className="rounded-xl overflow-hidden transition-all"
+                      style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isExp ? 'rgba(243,153,179,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                      }}
+                    >
+                      <div
+                        onClick={() => setExpanded(p => ({ ...p, [log.id]: !p[log.id] }))}
+                        className="p-3 flex items-center justify-between gap-3 cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent }} />
+                          <span className="sw-body text-xs font-medium" style={{ color: accent }}>
                             {log.direction || 'EVENT'}
                           </span>
-                          {log.tool && <span className="text-yellow-400 font-bold truncate">{log.tool}</span>}
-                          {log.method && !log.tool && <span className="truncate">{log.method}</span>}
-                          {!log.tool && !log.method && <span className="text-terminal-muted truncate">{log.category || 'stream'}</span>}
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {log.execution_ms != null && (
-                            <span className="flex items-center gap-1 text-matrix border border-matrix/40 px-1.5 py-0.5">
-                              <Clock className="w-2.5 h-2.5" />{log.execution_ms}ms
+                          {log.tool && (
+                            <span className="sw-body text-xs px-2 py-0.5 rounded"
+                              style={{ background: 'rgba(255,255,255,0.06)', color: '#fff' }}>
+                              {log.tool}
                             </span>
                           )}
-                          <span className="text-terminal-muted text-[9px]">
+                          {log.category && !log.tool && (
+                            <span className="sw-body text-xs text-neutral-400 truncate">
+                              · {log.category}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {log.execution_ms != null && (
+                            <span className="sw-body text-[11px] flex items-center gap-1 text-neutral-400">
+                              <Clock size={11} /> {log.execution_ms}ms
+                            </span>
+                          )}
+                          <span className="sw-body text-[11px] text-neutral-500">
                             {log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour12: false }) : ''}
                           </span>
-                          <button onClick={e => { e.stopPropagation(); copyToClipboard(log.id, log.payload || log); }}
-                            className="text-terminal-muted hover:text-matrix">
-                            {copiedId === log.id ? <Check className="w-3 h-3 text-matrix" /> : <Copy className="w-3 h-3" />}
+                          <button
+                            onClick={e => { e.stopPropagation(); copyToClipboard(log.id, log.payload || log); }}
+                            className="p-1 rounded text-neutral-400 hover:text-white"
+                            title="Copy JSON"
+                          >
+                            {copiedId === log.id ? <Check size={12} color="#00FF41" /> : <Copy size={12} />}
                           </button>
                         </div>
                       </div>
+
                       {isExp && (
-                        <div className="border-t border-current/20 p-2 bg-terminal-black/60">
-                          <pre className="text-[9px] overflow-x-auto text-terminal-muted leading-relaxed max-h-40">
-                            {JSON.stringify(log.payload, null, 2)}
+                        <div className="p-3 border-t"
+                          style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.4)' }}>
+                          <pre className="sw-body text-[11px] text-neutral-300 overflow-x-auto leading-relaxed max-h-48">
+                            {JSON.stringify(log.payload || log, null, 2)}
                           </pre>
                         </div>
                       )}
@@ -225,180 +314,245 @@ export default function MCPPage({ state, logs, recentNudge, onSimulateTool, onSe
             </div>
           </div>
 
-          {/* ── RIGHT: ALEXA + BEDROCK PANEL (5 cols) ───── */}
-          <div className="xl:col-span-5 space-y-4">
+          {/* RIGHT: VOICE INTERFACE + ECHO SIMULATION + TRIAGE (5 cols) */}
+          <div className="lg:col-span-5 space-y-4">
 
-            {/* Voice Command Interface */}
-            <VoiceCommand onResult={(r) => console.log('[VoiceCommand result]', r)} />
+            {/* Voice Command Card */}
+            <VoiceCommand onResult={r => console.log('[VoiceCommand]', r)} />
 
-            {/* Echo Show Simulation */}
-            <div className={`border-2 bg-terminal-panel p-4 relative overflow-hidden ${echoGlow}`}
-              style={{ transition: 'all 0.5s ease' }}>
+            {/* Echo Show Ambient Screen Simulation */}
+            <div className="rounded-2xl p-5 space-y-4 transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isEmergency ? 'rgba(255,49,49,0.4)' : 'rgba(243,153,179,0.3)'}`,
+                boxShadow: isEmergency ? '0 0 30px rgba(255,49,49,0.2)' : '0 0 20px rgba(243,153,179,0.1)'
+              }}>
 
-              {/* Status bar */}
-              <div className="flex items-center justify-between text-[9px] font-mono pb-3 border-b border-current/20 mb-4">
-                <div className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full animate-ping ${isEmergency ? 'bg-red-400' : 'bg-matrix'}`} />
-                  <span className="font-pixel text-[8px]">ECHO SHOW 10</span>
-                  <span className="text-terminal-muted">// Living Room Hub</span>
-                </div>
+              <div className="flex items-center justify-between pb-3 border-b"
+                style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setTtsOn(!ttsOn)}
-                    className={`flex items-center gap-1 border px-1.5 py-0.5 text-[9px] ${ttsOn ? 'border-matrix text-matrix' : 'border-terminal-border text-terminal-muted'}`}>
-                    {ttsOn ? <><Volume2 className="w-3 h-3" /> TTS ON</> : <><VolumeX className="w-3 h-3" /> TTS OFF</>}
-                  </button>
+                  <span className={`w-2 h-2 rounded-full ${isEmergency ? 'bg-red-400 animate-ping' : 'bg-rose-400 animate-pulse'}`} />
+                  <span className="sw-heading text-xs text-white">Echo Show 10</span>
+                  <span className="sw-body text-xs" style={{ color: '#777' }}>· Kitchen / Living Hub</span>
                 </div>
+                <button
+                  onClick={() => setTtsOn(!ttsOn)}
+                  className="sw-body text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all"
+                  style={{
+                    background: ttsOn ? 'rgba(243,153,179,0.15)' : 'rgba(255,255,255,0.04)',
+                    color: ttsOn ? '#F399B3' : '#888',
+                    border: `1px solid ${ttsOn ? 'rgba(243,153,179,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  {ttsOn ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                  {ttsOn ? 'TTS Enabled' : 'TTS Muted'}
+                </button>
               </div>
 
-              {/* Ambient light ring visual */}
-              <div className={`h-1 w-full mb-4 ${isEmergency ? 'bg-red-500' : isHigh ? 'bg-orange-400' : isMedium ? 'bg-yellow-400' : 'bg-matrix'}`}
-                style={{ boxShadow: us.glow }} />
+              {/* Ambient Ring Glow Strip */}
+              <div
+                className="w-full h-1 rounded-full transition-all"
+                style={{ background: urgencyAccent, boxShadow: `0 0 14px ${urgencyAccent}` }}
+              />
 
-              {/* Voice content */}
-              <div className="min-h-28 flex flex-col items-center justify-center text-center px-2 py-2">
+              {/* Dialogue Bubble */}
+              <div className="min-h-24 flex flex-col items-center justify-center text-center p-3 rounded-xl"
+                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.04)' }}>
                 {recentNudge ? (
-                  <>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Mic className={`w-3.5 h-3.5 ${isEmergency ? 'text-red-400 animate-pulse' : 'text-matrix'}`} />
-                      <span className="text-[9px] uppercase tracking-widest text-terminal-muted">
-                        PROACTIVE CHECK-IN // {(recentNudge.tone || 'gentle').toUpperCase()}
-                      </span>
+                  <div className="space-y-3">
+                    <div className="sw-body text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5"
+                      style={{ color: '#F399B3' }}>
+                      <Mic size={12} /> Proactive Check-In ({recentNudge.tone || 'gentle'})
                     </div>
-                    <p className="text-[11px] font-mono text-matrix text-glow leading-relaxed max-w-xs">
+                    <p className="sw-body text-sm text-white italic max-w-sm leading-relaxed">
                       "{recentNudge.voice_script || recentNudge.screen_display_text}"
                     </p>
-                    <div className="flex gap-2 mt-4">
-                      {(recentNudge.action_buttons || ['I\'m Okay', 'I Need Help']).map(btn => (
-                        <button key={btn} onClick={() => handleResident(btn)}
-                          className={`btn-pixel text-[9px] px-3 py-1.5 ${
-                            btn.toLowerCase().includes('help') || btn.toLowerCase().includes('assist')
-                              ? 'btn-pixel-danger' : ''
-                          }`}>
+                    <div className="flex flex-wrap justify-center gap-2 pt-1">
+                      {(recentNudge.action_buttons || ["I'm Okay", 'I Need Assistance']).map(btn => (
+                        <button
+                          key={btn}
+                          onClick={() => handleResident(btn)}
+                          className="sw-body text-xs px-3 py-1.5 rounded-lg transition-all"
+                          style={{
+                            background: btn.toLowerCase().includes('need') || btn.toLowerCase().includes('help')
+                              ? '#FF3131'
+                              : 'rgba(255,255,255,0.08)',
+                            color: '#fff',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            cursor: 'pointer',
+                          }}
+                        >
                           {btn}
                         </button>
                       ))}
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <div className="text-center text-terminal-muted text-[10px] py-4 space-y-2">
-                    <Mic className="w-5 h-5 mx-auto opacity-30 text-matrix" />
-                    <p>Passive ambient monitoring active.</p>
-                    <p className="text-[9px] opacity-70">Run a tool or load a scenario to trigger a proactive nudge.</p>
+                  <div className="text-center py-4 space-y-1">
+                    <Mic size={20} className="mx-auto text-neutral-600 mb-2" />
+                    <div className="sw-body text-xs text-neutral-400">Passive ambient listening active.</div>
+                    <div className="sw-body text-[11px] text-neutral-600">Trigger a scenario or tool to emit an Alexa utterance.</div>
                   </div>
                 )}
               </div>
 
-              {/* Resident response input */}
-              <div className="mt-4 border-t border-current/20 pt-3 space-y-2">
-                <div className="text-[9px] text-terminal-muted flex items-center gap-1.5">
-                  <User className="w-3 h-3" /> SIMULATE RESIDENT RESPONSE:
+              {/* Resident Spoken Response Simulator */}
+              <div className="space-y-2 pt-2">
+                <div className="sw-body text-xs text-neutral-400 flex items-center gap-1.5">
+                  <User size={13} color="#F399B3" />
+                  Simulate Spoken Resident Reply:
                 </div>
-                <div className="flex flex-wrap gap-1.5 mb-2">
+                <div className="flex flex-wrap gap-1.5">
                   {["I'm okay, just reading.", "I feel dizzy, call Sarah.", "Heading to kitchen now.", "Help, I fell!"].map(p => (
-                    <button key={p} onClick={() => handleResident(p)}
-                      className="text-[9px] border border-terminal-border text-terminal-muted hover:border-matrix hover:text-matrix px-2 py-0.5 transition-all">
+                    <button
+                      key={p}
+                      onClick={() => handleResident(p)}
+                      className="sw-body text-xs px-2.5 py-1 rounded-lg text-neutral-400 hover:text-white transition-all"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    >
                       "{p}"
                     </button>
                   ))}
                 </div>
-                <div className="flex gap-2">
-                  <input type="text" value={resInput} onChange={e => setResInput(e.target.value)}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={resInput}
+                    onChange={e => setResInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleResident()}
-                    placeholder="Type resident voice response..."
-                    className="flex-1 bg-terminal-black border border-terminal-border text-[10px] px-2 py-1.5 text-matrix font-mono focus:outline-none focus:border-matrix" />
-                  <button onClick={() => handleResident()} disabled={submitting || !resInput.trim()}
-                    className="btn-pixel-solid px-3 py-1.5 text-[10px]">
-                    <Send className="w-3 h-3" />
+                    placeholder="Type speech utterance..."
+                    className="flex-1 px-3 py-2 rounded-xl text-xs sw-body text-white placeholder-neutral-500 focus:outline-none"
+                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  />
+                  <button
+                    onClick={() => handleResident()}
+                    disabled={submitting || !resInput.trim()}
+                    className="px-4 py-2 rounded-xl text-xs sw-body font-medium transition-all"
+                    style={{
+                      background: '#F399B3',
+                      color: '#121212',
+                      cursor: submitting || !resInput.trim() ? 'not-allowed' : 'pointer',
+                      opacity: submitting || !resInput.trim() ? 0.4 : 1,
+                    }}
+                  >
+                    <Send size={13} />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Bedrock AgentCore Triage Card */}
-            <div className="border border-terminal-border bg-terminal-panel p-4 space-y-3">
+            {/* AWS Bedrock AgentCore Card */}
+            <div className="rounded-2xl p-5 space-y-4"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[10px] text-terminal-muted uppercase tracking-widest">
-                  <BrainCircuit className="w-3 h-3 text-purple-400" />
-                  <span>// Bedrock AgentCore Triage</span>
+                <div className="flex items-center gap-2">
+                  <BrainCircuit size={15} color="#A78BFA" />
+                  <span className="sw-heading text-sm text-white">Bedrock AgentCore Triage</span>
                 </div>
-                <span className="text-[9px] font-pixel text-purple-400 border border-purple-500/50 px-1.5 py-0.5">
-                  CLAUDE 3.5 v2
+                <span className="sw-body text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(167,139,250,0.15)', color: '#C4B5FD', border: '1px solid rgba(167,139,250,0.3)' }}>
+                  Claude 3.5 Sonnet v2
                 </span>
               </div>
 
-              {/* Score gauge */}
+              {/* Risk Gauge */}
               <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-[10px]">
-                  <span className="text-terminal-muted">ANOMALY SCORE</span>
-                  <span className={`font-pixel text-[11px] ${us.text}`}>{score}% // {urgency}</span>
+                <div className="flex justify-between items-center sw-body text-xs">
+                  <span className="text-neutral-400">Risk Severity Score</span>
+                  <span className="font-medium" style={{ color: urgencyAccent }}>{score}% · {urgency}</span>
                 </div>
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 25 }, (_, i) => (
-                    <div key={i} className={`flex-1 h-3 ${i < Math.round(score / 4) ? us.bar : 'bg-terminal-border'}`} />
-                  ))}
+                <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${score}%`, background: urgencyAccent }}
+                  />
                 </div>
               </div>
 
-              {/* Clinical summary */}
-              <div className="text-[10px] space-y-1.5 border-t border-terminal-border pt-3">
-                <div><span className="text-terminal-muted">CIRCADIAN:</span> <span className={us.text}>
-                  {isEmergency ? 'Bathroom dwell >45 min at 02:15 AM'
-                   : isMedium  ? 'Kitchen inactive 95m past 08:15 routine'
-                   : 'Routine waking & kitchen transition aligned'}
-                </span></div>
-                <div><span className="text-terminal-muted">VITALS:</span> <span className={us.text}>
-                  {isEmergency ? 'Tachycardia (115 bpm) + 3.42G impact + SpO2 94%'
-                   : isHigh    ? 'HR 118 bpm + SpO2 90% + Pyrexia 38.2°C'
-                   : 'Stable resting vitals (72 bpm, 98% SpO2)'}
-                </span></div>
+              {/* Clinical Snapshot */}
+              <div className="space-y-2 text-xs sw-body p-3 rounded-xl"
+                style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="flex items-start gap-2">
+                  <span className="text-neutral-500 flex-shrink-0">CIRCADIAN:</span>
+                  <span className="text-neutral-200">
+                    {isEmergency ? 'Bathroom dwell >45m at 02:15 AM' : isMedium ? 'Kitchen inactive 95m past 08:15 routine' : 'Aligned to 08:15 AM tea & meds'}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-neutral-500 flex-shrink-0">BIOMETRICS:</span>
+                  <span className="text-neutral-200">
+                    {isEmergency ? 'Tachycardia (115 bpm) + 3.42G impact' : isHigh ? 'HR 118 bpm + SpO2 90% drift' : 'Stable resting HR 72 bpm, 98% SpO2'}
+                  </span>
+                </div>
               </div>
 
-              {/* Chain of Thought toggle */}
+              {/* Chain of Thought Toggle */}
               <div>
-                <button onClick={() => setShowCoT(!showCoT)}
-                  className="flex items-center gap-1.5 text-[10px] text-purple-400 hover:text-purple-300">
-                  {showCoT ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                  {'>'} Bedrock Reasoning Chain
+                <button
+                  onClick={() => setShowCoT(!showCoT)}
+                  className="sw-body text-xs flex items-center gap-1.5 text-purple-300 hover:text-purple-200 transition-colors"
+                >
+                  {showCoT ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                  Clinical Reasoning Chain (AgentCore)
                 </button>
                 {showCoT && (
-                  <div className="mt-2 p-3 bg-terminal-black border border-purple-500/30 text-[9px] font-mono text-terminal-muted leading-relaxed space-y-1">
-                    <p className="text-purple-400 font-bold">// Sensor Fusion & Clinical Synthesis</p>
-                    <p>1. Ingested 60-min sliding window from Ring PIR sensors and Bee biometric telemetry.</p>
-                    <p>2. Evaluated against Eleanor Vance's circadian baseline (08:15 AM tea & Lisinopril window).</p>
-                    <p>3. Applied differential diagnostics: phone-drop vs hard fall using 3-axis accel and HR delta.</p>
-                    <p>4. Recommended empathetic proactive voice nudge via closest Echo device.</p>
+                  <div className="mt-2.5 p-3 rounded-xl sw-body text-xs space-y-1 leading-relaxed text-neutral-300"
+                    style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)' }}>
+                    <p className="text-purple-300 font-medium">// Sensor Fusion & Behavioral Synthesis</p>
+                    <p>1. Ingested 60-min telemetry window from Ring PIR sensors and Bee continuous wearable.</p>
+                    <p>2. Evaluated against Eleanor Vance's circadian baseline (08:15 AM tea & Lisinopril routine).</p>
+                    <p>3. Computed impact differential: verified 3.42G deceleration pulse alongside acute heart rate shift.</p>
+                    <p>4. Triggered proactive empathetic utterance with dual-contact caregiver escalation queue.</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Caregiver Escalation */}
-            <div className={`border p-4 space-y-3 ${isEmergency ? 'border-red-500/70 bg-red-500/5' : 'border-terminal-border bg-terminal-panel'}`}
-              style={isEmergency ? { boxShadow: '0 0 15px rgba(255,49,49,0.2)' } : {}}>
+            {/* Escalation Notification Contacts Card */}
+            <div className="rounded-2xl p-5 space-y-3"
+              style={{
+                background: isEmergency ? 'rgba(255,49,49,0.06)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isEmergency ? 'rgba(255,49,49,0.3)' : 'rgba(255,255,255,0.08)'}`,
+              }}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[10px] text-terminal-muted uppercase tracking-widest">
-                  <PhoneCall className={`w-3 h-3 ${isEmergency ? 'text-red-400 animate-bounce' : 'text-matrix'}`} />
-                  <span>// Caregiver Escalation</span>
+                <div className="flex items-center gap-2">
+                  <PhoneCall size={14} color={isEmergency ? '#FF3131' : '#F399B3'} />
+                  <span className="sw-heading text-sm text-white">Emergency Dual-Escalation</span>
                 </div>
-                <span className={`font-pixel text-[8px] px-1.5 py-0.5 border ${
-                  isEmergency ? 'border-red-500 text-red-400 animate-pulse' : 'border-matrix/50 text-matrix'
-                }`}>
-                  {isEmergency ? 'QUEUED' : 'STANDBY'}
+                <span className="sw-body text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: isEmergency ? 'rgba(255,49,49,0.2)' : 'rgba(255,255,255,0.06)',
+                    color: isEmergency ? '#FF3131' : '#888',
+                    border: `1px solid ${isEmergency ? 'rgba(255,49,49,0.4)' : 'rgba(255,255,255,0.1)'}`
+                  }}>
+                  {isEmergency ? 'ESCALATING (2 CONTACTS)' : 'STANDBY'}
                 </span>
               </div>
-              <div className="text-[10px] space-y-1">
-                <div><span className="text-terminal-muted">CONTACT: </span><span className="text-matrix">{profile.caregiver?.name || 'Dr. Sarah Vance (Daughter)'}</span></div>
-                <div><span className="text-terminal-muted">PHONE:   </span><span className="text-matrix font-pixel text-[9px]">{profile.caregiver?.contact_phone || '+1-555-019-2831'}</span></div>
-                <div><span className="text-terminal-muted">POLICY:  </span><span className="text-matrix">SMS on MEDIUM, Automated Call on CRITICAL</span></div>
+
+              <div className="space-y-2 pt-1">
+                {[
+                  { name: 'Dr. Sarah Vance', role: 'Daughter / Primary Caregiver', phone: '+1-555-019-2831', action: 'Phone Call + SMS' },
+                  { name: 'Margaret Chen', role: 'Next-Door Neighbour', phone: '+1-555-034-7712', action: 'SMS + Physical Door Check' },
+                ].map(c => (
+                  <div key={c.name} className="p-3 rounded-xl flex items-center justify-between text-xs sw-body"
+                    style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div>
+                      <div className="text-white font-medium">{c.name}</div>
+                      <div className="text-neutral-400 text-[11px]">{c.role} · {c.phone}</div>
+                    </div>
+                    <span className="px-2 py-1 rounded text-[10px]"
+                      style={{ background: 'rgba(243,153,179,0.1)', color: '#F399B3' }}>
+                      {c.action}
+                    </span>
+                  </div>
+                ))}
               </div>
-              {isEmergency && (
-                <div className="text-[9px] text-red-400 border border-red-500/50 p-2 animate-pulse">
-                  ⚠ HIGH-PRIORITY ESCALATION QUEUED // Automated call in 30s if no resident response
-                </div>
-              )}
             </div>
+
           </div>
+
         </div>
+
       </div>
     </div>
   );
