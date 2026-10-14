@@ -1,9 +1,10 @@
+/* ── Google Fonts ───────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Playfair+Display:wght@400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── Google Fonts ───────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Playfair+Display:wght@400&display=swap');
 
 /* ── Starwave Font Helpers ───────────────────────── */
 .sw-heading  { font-family: 'Manrope', sans-serif; font-weight: 400; letter-spacing: -0.02em; line-height: 1.1; }

@@ -75,35 +75,6 @@ def verify_bearer_token(authorization: Optional[str] = Header(None), token: Opti
         )
     return provided_token
 
-    """Validates HTTP Bearer token using constant-time string comparison.
-
-    Required by Spec 2025-11-25 for authenticated Streamable HTTP MCP transports.
-    """
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header. MCP Spec 2025-11-25 requires 'Bearer <token>'",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    parts = authorization.strip().split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Authorization header format. Expected 'Bearer <token>'",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    provided_token = parts[1]
-    expected_token = os.getenv("MCP_BEARER_TOKEN", DEFAULT_MCP_TOKEN)
-
-    if not hmac.compare_digest(provided_token.encode("utf-8"), expected_token.encode("utf-8")):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Invalid MCP Bearer token",
-        )
-
-    return provided_token
 
 
 def sanitize_text_input(field_name: str, value: Any, max_length: int = 500) -> str:

@@ -80,6 +80,15 @@ def broadcast_log(log_entry: Dict[str, Any]) -> None:
         except Exception:
             pass
 
+    for q in list(mcp_sessions.values()):
+        try:
+            # Package as expected by frontend SSE reader (type: 'log', 'nudge', 'state')
+            sse_type = "nudge" if log_entry.get("category") == "voice_nudge" else "log"
+            q.put_nowait({"type": sse_type, "payload": log_entry})
+        except Exception:
+            pass
+
+
 
 # Forward telemetry store events to simulator logs
 def on_telemetry_event(event: Dict[str, Any]) -> None:
@@ -399,8 +408,20 @@ async def mcp_sse_endpoint(
                 "data": post_endpoint,
             }
 
-            # 2. Stream subsequent messages or keep-alives
+            # 2. Push initial ambient state snapshot
+            initial_state = {
+                "status": "online",
+                "snapshot": telemetry_store.get_current_snapshot(),
+                "resident_profile": telemetry_store.profile.model_dump(),
+            }
+            yield {
+                "event": "message",
+                "data": json.dumps({"type": "state", "payload": initial_state}),
+            }
+
+            # 3. Stream subsequent messages or keep-alives
             while True:
+
                 if await request.is_disconnected():
                     break
                 try:
@@ -518,9 +539,10 @@ async def mcp_messages_endpoint(
         return JSONResponse(content=response)
 
     # 5. TOOLS/CALL
-    if method == "tools/call":
-        tool_name = params.get("name")
-        raw_args = params.get("arguments", {})
+    if method == "tools/call" or body.get("tool_name"):
+        tool_name = params.get("name") or params.get("tool") or body.get("tool_name")
+        raw_args = params.get("arguments") or body.get("arguments", {})
+
 
         # Security check: Sanitize tool arguments against Prompt Injection & Jailbreaks
         try:
@@ -675,10 +697,12 @@ class ScenarioRequest(BaseModel):
 
 
 @app.post("/api/simulator/scenario")
+@app.post("/api/simulator/set-scenario")
 async def set_simulator_scenario(req: ScenarioRequest) -> Dict[str, Any]:
     """Loads a clinical preset scenario."""
     snapshot = telemetry_store.load_scenario(req.scenario_id)
     return {"status": "scenario_loaded", "active_scenario": req.scenario_id, "snapshot": snapshot}
+
 
 
 class MotionToggleRequest(BaseModel):
