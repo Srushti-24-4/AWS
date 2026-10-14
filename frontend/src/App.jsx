@@ -64,12 +64,12 @@ export default function App() {
   };
 
   // Scenario switch
-  const changeScenario = async (scenarioId) => {
+  const changeScenario = async (scenarioId, shouldNavigate = false) => {
     await axios.post('/api/simulator/set-scenario', { scenario_id: scenarioId });
     // force refresh state
     const res = await axios.get('/api/simulator/state');
     setState(res.data);
-    navigate('/');
+    if (shouldNavigate) navigate('/');
   };
 
   // Refresh state manually (used after sensor toggles)
