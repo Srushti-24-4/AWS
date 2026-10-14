@@ -74,6 +74,52 @@
   flex-shrink: 0;
 }
 
+/* ── 3D Starwave Planet & Ring Keyframes ─────────── */
+@keyframes planet-rotate {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes planet-float {
+  0%, 100% { transform: translateY(0px) rotateX(12deg); }
+  50%      { transform: translateY(-12px) rotateX(20deg); }
+}
+
+@keyframes orbit-spin {
+  0%   { transform: rotateX(68deg) rotateZ(0deg); }
+  100% { transform: rotateX(68deg) rotateZ(360deg); }
+}
+
+@keyframes orbit-spin-reverse {
+  0%   { transform: rotateX(60deg) rotateY(25deg) rotateZ(360deg); }
+  100% { transform: rotateX(60deg) rotateY(25deg) rotateZ(0deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 0.85; transform: scale(1.08); }
+}
+
+.anim-planet-float {
+  animation: planet-float 8s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.anim-orbit-1 {
+  animation: orbit-spin 22s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.anim-orbit-2 {
+  animation: orbit-spin-reverse 28s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.anim-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+
 
 /* ── Global Reset ───────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }

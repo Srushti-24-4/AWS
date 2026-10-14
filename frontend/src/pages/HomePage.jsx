@@ -17,76 +17,137 @@ const SCENARIOS = {
 };
 
 /* ─────────────────────────────────────────────────
-   Rose planetary globe (pure CSS)
+   3D Dynamic Rotating Rose Planetary Globe
 ───────────────────────────────────────────────── */
 function RosePlanet({ urgency }) {
   const glowColor =
-    urgency === 'CRITICAL' ? 'rgba(255,49,49,0.7)'  :
-    urgency === 'HIGH'     ? 'rgba(251,146,60,0.6)' :
-    urgency === 'MEDIUM'   ? 'rgba(255,215,0,0.5)'  :
-                             'rgba(243,153,179,0.55)';
+    urgency === 'CRITICAL' ? 'rgba(255,49,49,0.75)'  :
+    urgency === 'HIGH'     ? 'rgba(251,146,60,0.65)' :
+    urgency === 'MEDIUM'   ? 'rgba(255,215,0,0.55)'  :
+                             'rgba(243,153,179,0.6)';
+
+  const coreGradient =
+    urgency === 'CRITICAL'
+      ? 'radial-gradient(circle at 35% 30%, #ff8a8a 0%, #d32f2f 45%, #1a0505 100%)'
+      : urgency === 'HIGH'
+      ? 'radial-gradient(circle at 35% 30%, #ffb74d 0%, #e65100 45%, #1f0b00 100%)'
+      : urgency === 'MEDIUM'
+      ? 'radial-gradient(circle at 35% 30%, #fff176 0%, #f57f17 45%, #1c1500 100%)'
+      : 'radial-gradient(circle at 35% 30%, #ffd1dc 0%, #f399b3 35%, #7a3e4e 70%, #15090e 100%)';
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: 340, height: 340 }}>
-      {/* Outer ambient glow */}
+    <div className="relative flex items-center justify-center select-none" style={{ width: 380, height: 380, perspective: 1000 }}>
+      {/* Outer ambient breathing glow */}
       <div
-        className="absolute rounded-full"
+        className="absolute rounded-full anim-pulse-glow pointer-events-none"
         style={{
-          width: 340, height: 340,
-          background: `radial-gradient(circle at 50% 60%, ${glowColor} 0%, transparent 70%)`,
-          filter: 'blur(40px)',
-          opacity: 0.6,
+          width: 360,
+          height: 360,
+          background: `radial-gradient(circle, ${glowColor} 0%, transparent 68%)`,
+          filter: 'blur(50px)',
         }}
       />
-      {/* Globe body */}
-      <div
-        className="relative rounded-full overflow-hidden"
-        style={{
-          width: 200, height: 200,
-          background: `radial-gradient(circle at 38% 35%, rgba(243,153,179,0.3) 0%, rgba(100,63,73,0.5) 40%, rgba(18,18,18,0.9) 100%)`,
-          boxShadow: `0 0 60px ${glowColor}, 0 0 120px rgba(243,153,179,0.15)`,
-          border: '1px solid rgba(243,153,179,0.2)',
-        }}
-      >
-        {/* Layered ring slices */}
-        {[0.85, 0.7, 0.55, 0.4].map((scale, i) => (
+
+      {/* Floating 3D Anchor */}
+      <div className="relative anim-planet-float flex items-center justify-center" style={{ width: 280, height: 280 }}>
+
+        {/* Orbit Ring 1 (Tilted primary ring) */}
+        <div
+          className="absolute rounded-full anim-orbit-1 pointer-events-none"
+          style={{
+            width: 300,
+            height: 300,
+            border: '1.5px solid rgba(243,153,179,0.35)',
+            boxShadow: `0 0 16px ${glowColor}, inset 0 0 16px rgba(243,153,179,0.15)`,
+          }}
+        >
+          {/* Orbital satellite bead */}
           <div
-            key={i}
-            className="absolute rounded-full"
+            className="absolute rounded-full bg-white"
             style={{
-              width: `${scale * 100}%`,
-              height: `${scale * 100}%`,
-              top: `${(1 - scale) * 50}%`,
-              left: `${(1 - scale) * 50}%`,
-              border: '1px solid rgba(243,153,179,0.12)',
-              background: 'transparent',
+              width: 7,
+              height: 7,
+              top: '50%',
+              left: -3.5,
+              boxShadow: '0 0 10px #fff, 0 0 20px #f399b3',
             }}
           />
-        ))}
-        {/* Highlight glare */}
-        <div
-          className="absolute"
-          style={{
-            width: 60, height: 40,
-            top: 28, left: 30,
-            background: 'rgba(255,255,255,0.08)',
-            borderRadius: '50%',
-            filter: 'blur(8px)',
-          }}
-        />
-      </div>
+        </div>
 
-      {/* Urgency pulse ring */}
-      {urgency !== 'NOMINAL' && (
+        {/* Orbit Ring 2 (Counter-rotating secondary ring) */}
         <div
-          className="absolute rounded-full animate-ping"
+          className="absolute rounded-full anim-orbit-2 pointer-events-none"
           style={{
-            width: 220, height: 220,
-            border: `1px solid ${glowColor}`,
-            opacity: 0.3,
+            width: 260,
+            height: 260,
+            border: '1px dashed rgba(243,153,179,0.22)',
           }}
         />
-      )}
+
+        {/* 3D Core Sphere */}
+        <div
+          className="relative rounded-full overflow-hidden flex items-center justify-center transition-all duration-700"
+          style={{
+            width: 190,
+            height: 190,
+            background: coreGradient,
+            boxShadow: `0 12px 40px ${glowColor}, inset -18px -18px 40px rgba(0,0,0,0.85), inset 12px 12px 24px rgba(255,255,255,0.45)`,
+            border: '1px solid rgba(255,255,255,0.18)',
+          }}
+        >
+          {/* Layered concentric depth contour ripples */}
+          {[0.82, 0.65, 0.48, 0.32].map((scale, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full pointer-events-none"
+              style={{
+                width: `${scale * 100}%`,
+                height: `${scale * 100}%`,
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'transparent',
+                boxShadow: 'inset 0 0 8px rgba(0,0,0,0.2)',
+              }}
+            />
+          ))}
+
+          {/* Rotating Latitude Wireframe Grids */}
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(circle, transparent 35%, rgba(0,0,0,0.3) 100%), repeating-linear-gradient(0deg, transparent, transparent 14px, rgba(255,255,255,0.06) 15px)',
+              animation: 'planet-rotate 40s linear infinite',
+            }}
+          />
+
+          {/* Top specular reflection / glass glare */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              width: 90,
+              height: 50,
+              top: 14,
+              left: 28,
+              background: 'radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 80%)',
+              borderRadius: '50%',
+              transform: 'rotate(-25deg)',
+              filter: 'blur(3px)',
+            }}
+          />
+        </div>
+
+        {/* Pulse beacon if alert */}
+        {urgency !== 'NOMINAL' && (
+          <div
+            className="absolute rounded-full animate-ping pointer-events-none"
+            style={{
+              width: 210,
+              height: 210,
+              border: `2px solid ${glowColor}`,
+              opacity: 0.5,
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -64,7 +64,7 @@ export default function SensorPage({ state, logs, onScenarioChange, onRefreshSta
     const targetPeakG = overrideVitals.peakG !== undefined ? overrideVitals.peakG : Number(peakG);
 
     try {
-      await fetch('/api/simulator/update-wearable', {
+      const res = await fetch('/api/simulator/update-wearable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,7 +75,11 @@ export default function SensorPage({ state, logs, onScenarioChange, onRefreshSta
           accelerometer_g: targetPeakG,
         }),
       });
-      if (onRefreshState) onRefreshState();
+      const data = await res.json();
+      if (onRefreshState) await onRefreshState();
+      if (data?.active_scenario && onScenarioChange) {
+        onScenarioChange(data.active_scenario);
+      }
       setAppliedMsg(true);
       setTimeout(() => setAppliedMsg(false), 2500);
     } finally {

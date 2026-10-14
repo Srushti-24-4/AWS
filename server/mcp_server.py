@@ -92,13 +92,30 @@ def broadcast_log(log_entry: Dict[str, Any]) -> None:
 
 # Forward telemetry store events to simulator logs
 def on_telemetry_event(event: Dict[str, Any]) -> None:
+    event_type = event.get("type", "telemetry")
+    event_data = event.get("data", {})
+
+    if event_type == "state_update":
+        # Push immediate state update to SSE sessions
+        full_state = {
+            "status": "online",
+            "snapshot": event_data,
+            "resident_profile": telemetry_store.profile.model_dump(),
+        }
+        for q in list(mcp_sessions.values()):
+            try:
+                q.put_nowait({"type": "state", "payload": full_state})
+            except Exception:
+                pass
+
     broadcast_log({
         "direction": "TELEMETRY",
-        "category": event.get("type", "telemetry"),
-        "payload": event.get("data", {}),
+        "category": event_type,
+        "payload": event_data,
     })
 
 telemetry_store.subscribe(on_telemetry_event)
+
 
 
 # ============================================================================
@@ -246,18 +263,38 @@ def handle_eval_anomaly_risk(args: Dict[str, Any]) -> Dict[str, Any]:
 def handle_trigger_voice_nudge(args: Dict[str, Any]) -> Dict[str, Any]:
     resident_id = args.get("resident_id", "RES-8821")
     tone = args.get("tone", "gentle")
-    context = args.get("custom_context")
+    context = args.get("custom_context") or args.get("custom_response")
     allow_escalation = args.get("allow_escalation", True)
 
     snapshot = telemetry_store.get_current_snapshot()
-    scenario = snapshot.get("active_scenario", "nominal_morning")
+    vitals = snapshot.get("bee_wearable_vitals", {})
 
-    # Generate empathetic Alexa utterance based on tone and context
+    # Dynamic Intent & Health Keyword Analysis
+    spoken_text = (context or "").lower()
+    is_fever = any(w in spoken_text for w in ["fever", "feverish", "hot", "chills", "sweating", "temperature"])
+    is_fall  = any(w in spoken_text for w in ["fell", "fall", "floor", "can't get up", "cannot get up", "hurt", "bleeding"])
+    is_dizzy = any(w in spoken_text for w in ["dizzy", "faint", "lightheaded", "unsteady", "weak"])
+    is_okay  = any(w in spoken_text for w in ["i'm okay", "im okay", "fine", "reading", "just resting", "all good"])
+
+    if is_fall:
+        tone = "emergency"
+        context = "Eleanor reported a fall. Initiating emergency escalation and dispatching alerts to family and neighbour."
+    elif is_fever:
+        tone = "urgent"
+        skin_temp = vitals.get("skin_temp_c", 38.2)
+        context = f"Eleanor reported feeling feverish. Wearable skin temp is elevated at {skin_temp}°C. Queuing caregiver alert and recommending hydration and rest."
+    elif is_dizzy:
+        tone = "urgent"
+        context = "Eleanor reported dizziness. Advising to remain seated, avoid sudden standing, and notifying caregiver Sarah."
+    elif is_okay:
+        tone = "gentle"
+        context = "Eleanor confirmed she is doing well. Standing down active check-in."
+
     prompts = {
-        "gentle": f"Good morning Eleanor. I noticed you haven't made your morning tea yet. Are you feeling alright?",
-        "inquisitive": f"Hi Eleanor, just checking in. I see you've been resting in the living room for a while. Need any water or help?",
-        "urgent": f"Eleanor, this is Alexa. Your wearable detected an unusual reading. Please let me know if you can hear me.",
-        "emergency": f"Eleanor! I detected an impact in the bathroom. Please say 'I'm okay' or tap the screen. Contacting Dr. Sarah Vance in 30 seconds.",
+        "gentle": "Good morning Eleanor. I noticed you haven't made your morning tea yet. Are you feeling alright?",
+        "inquisitive": "Hi Eleanor, just checking in. I see you've been resting in the living room for a while. Need any water or help?",
+        "urgent": f"Eleanor, Alexa heard: '{context}'. Please sit down and sip water. I am notifying Dr. Sarah Vance now.",
+        "emergency": "Eleanor! Help is being contacted immediately. Dr. Sarah Vance and your neighbour Margaret have been alerted.",
     }
 
     voice_prompt = context or prompts.get(tone, prompts["gentle"])
@@ -269,9 +306,10 @@ def handle_trigger_voice_nudge(args: Dict[str, Any]) -> Dict[str, Any]:
         "tone": tone,
         "voice_script": voice_prompt,
         "screen_display_text": voice_prompt,
-        "action_buttons": ["I'm Okay", "I Need Assistance", "Snooze 10m"],
+        "action_buttons": ["I'm Okay", "I Need Assistance", "Call Dr. Sarah"] if escalation_queued else ["I'm Okay", "I Need Assistance", "Snooze 10m"],
         "caregiver_escalation_queued": escalation_queued,
         "escalation_contacts": telemetry_store.profile.escalation_contacts if escalation_queued else [],
+        "resident_reported_symptom": "feverish" if is_fever else "fall" if is_fall else "dizziness" if is_dizzy else None,
         "dispatched_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -727,7 +765,7 @@ class BiometricUpdateRequest(BaseModel):
 
 @app.post("/api/simulator/update-wearable")
 async def update_wearable(req: BiometricUpdateRequest) -> Dict[str, Any]:
-    """Manually updates simulated Bee wearable biometrics."""
+    """Manually updates simulated Bee wearable biometrics and triggers proactive triage."""
     res = telemetry_store.update_wearable(
         heart_rate=req.heart_rate,
         spo2=req.spo2,
@@ -735,7 +773,31 @@ async def update_wearable(req: BiometricUpdateRequest) -> Dict[str, Any]:
         fall_detected=req.fall_detected,
         accelerometer_peak_g=req.accelerometer_g,
     )
-    return {"status": "ok", "wearable": res.model_dump()}
+    current_snapshot = telemetry_store.get_current_snapshot()
+    active_scenario = current_snapshot.get("active_scenario", "nominal_morning")
+
+    # If vitals indicate medium/high/critical anomaly, proactively dispatch Alexa voice check-in
+    nudge_result = None
+    if active_scenario in ["missed_kitchen_routine", "cardiovascular_drift", "bathroom_fall_dwell"]:
+        tone = "emergency" if active_scenario == "bathroom_fall_dwell" else "urgent"
+        nudge_result = handle_trigger_voice_nudge({
+            "resident_id": "RES-8821",
+            "tone": tone,
+            "custom_context": (
+                "Bee wearable vitals spiked: "
+                f"Heart Rate {res.heart_rate_bpm} BPM, SpO2 {res.spo2_percent}%, Skin Temp {res.skin_temp_c}°C. "
+                "Alexa is checking in: 'Eleanor, are you feeling alright? Please sit down.'"
+            ),
+        })
+
+    return {
+        "status": "ok",
+        "wearable": res.model_dump(),
+        "active_scenario": active_scenario,
+        "snapshot": current_snapshot,
+        "nudge_triggered": nudge_result is not None,
+    }
+
 
 
 class ResidentResponseRequest(BaseModel):

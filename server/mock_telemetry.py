@@ -217,12 +217,30 @@ class TelemetryStore:
             self.wearable.accelerometer_peak_g = accelerometer_peak_g
         self.wearable.timestamp = now_iso
 
+        # ── Dynamic Clinical Risk Synthesis ───────────────
+        # Automatically shift active_scenario based on biometrics & sensors
+        hr = self.wearable.heart_rate_bpm
+        spo2_val = self.wearable.spo2_percent
+        temp_val = self.wearable.skin_temp_c
+        fall_val = self.wearable.fall_detected
+        peak_g = self.wearable.accelerometer_peak_g
+
+        if fall_val or peak_g >= 3.0:
+            self.active_scenario = "bathroom_fall_dwell"
+        elif hr >= 110 or spo2_val <= 91 or temp_val >= 38.0:
+            self.active_scenario = "cardiovascular_drift"
+        elif hr >= 95 or spo2_val <= 94 or temp_val >= 37.5:
+            self.active_scenario = "missed_kitchen_routine"
+        else:
+            self.active_scenario = "nominal_morning"
+
         snapshot = self.wearable.model_dump()
         self.wearable_history.append(snapshot)
         if len(self.wearable_history) > 200:
             self.wearable_history.pop(0)
 
         self._broadcast("wearable_telemetry", snapshot)
+        self._broadcast("state_update", self.get_current_snapshot())
         return self.wearable
 
     def get_current_snapshot(self) -> Dict[str, Any]:

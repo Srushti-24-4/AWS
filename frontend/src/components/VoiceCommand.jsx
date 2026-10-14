@@ -86,7 +86,14 @@ export default function VoiceCommand({ onResult }) {
           arguments: { command: text, ...(storedKey ? { gemini_key: storedKey } : {}) },
         },
       });
-      const result = res.data?.result;
+      let result = res.data?.result;
+      if (result && Array.isArray(result.content) && result.content[0]?.text) {
+        try {
+          result = JSON.parse(result.content[0].text);
+        } catch (_) {
+          result = { decision: result.content[0].text, source: 'gemini' };
+        }
+      }
       setResponse(result);
       if (onResult) onResult(result);
     } catch (e) {
